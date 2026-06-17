@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yotoko — Dashboard Grow Studio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #1a1a2e;
+    --bg3: #16213e;
+    --accent: #e94560;
+    --accent2: #0f3460;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --border: #2d3748;
+    --card: #1e2433;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: var(--bg2); border-bottom: 3px solid var(--accent); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; z-index: 100; }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; color: var(--accent); text-transform: uppercase; }
+  .client-name { font-size: 16px; font-weight: 700; color: var(--text); }
+  .header-right { display: flex; align-items: center; gap: 20px; }
+  .period-badge { background: var(--accent); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; }
+  .view-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .view-btn { padding: 6px 14px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+  .view-btn.active { background: var(--accent); color: white; }
+  .view-btn:not(.active) { background: var(--bg3); color: var(--text2); }
+  .view-btn:not(.active):hover { background: var(--border); color: var(--text); }
+
+  /* LAYOUT */
+  .main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+  .section-title { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text2); margin-bottom: 12px; margin-top: 28px; display: flex; align-items: center; gap: 8px; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* KPI CARDS */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; position: relative; overflow: hidden; transition: transform 0.2s; }
+  .kpi-card:hover { transform: translateY(-2px); }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent-color, var(--accent)); }
+  .kpi-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text2); margin-bottom: 8px; }
+  .kpi-value { font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 8px; }
+  .kpi-delta { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; }
+  .delta-up { color: var(--green); }
+  .delta-down { color: var(--red); }
+  .kpi-sub { font-size: 10px; color: var(--text2); margin-top: 2px; }
+
+  /* CHARTS GRID */
+  .charts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .charts-3col { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .chart-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .chart-sub { font-size: 10px; color: var(--text2); margin-bottom: 16px; }
+  .chart-wrap { position: relative; }
+
+  /* TABLE */
+  .table-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .table-header { display: grid; padding: 10px 16px; background: var(--bg3); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text2); }
+  .table-row { display: grid; padding: 11px 16px; border-top: 1px solid var(--border); transition: background 0.15s; font-size: 12px; align-items: center; }
+  .table-row:hover { background: rgba(255,255,255,0.03); }
+  .table-campanas .table-header,
+  .table-campanas .table-row { grid-template-columns: 2fr 80px 80px 80px 80px 90px; }
+  .table-productos .table-header,
+  .table-productos .table-row { grid-template-columns: 2fr 90px 70px 90px; }
+
+  /* BADGES */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+  .badge-green { background: rgba(74,222,128,0.15); color: var(--green); }
+  .badge-yellow { background: rgba(250,204,21,0.15); color: var(--yellow); }
+  .badge-red { background: rgba(248,113,113,0.15); color: var(--red); }
+  .badge-orange { background: rgba(251,146,60,0.15); color: var(--orange); }
+
+  /* ACOS BAR */
+  .acos-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .acos-bar { height: 6px; border-radius: 3px; flex: 1; background: var(--border); overflow: hidden; }
+  .acos-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+  /* INTERNAL ONLY */
+  .internal-only { display: none; }
+  body.view-internal .internal-only { display: block; }
+  body.view-internal .client-only { display: none; }
+
+  /* FOOTER */
+  .footer { text-align: center; padding: 32px; color: var(--text2); font-size: 11px; margin-top: 40px; border-top: 1px solid var(--border); }
+  .footer strong { color: var(--accent); }
+
+  /* ORGANIC VS PPC */
+  .split-bar { height: 8px; border-radius: 4px; overflow: hidden; display: flex; margin-top: 8px; }
+  .split-ppc { background: var(--accent); }
+  .split-org { background: var(--accent2); }
+  .split-legend { display: flex; gap: 16px; margin-top: 6px; }
+  .split-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .charts-2col, .charts-3col { grid-template-columns: 1fr; }
+    .main { padding: 16px; }
+    .header { padding: 0 16px; }
+  }
+</style>
+</head>
+<body class="view-client">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <span class="logo">Grow Studio</span>
+    <span style="color:var(--border)">|</span>
+    <span class="client-name">Yotoko</span>
+  </div>
+  <div class="header-right">
+    <span class="period-badge">Pendiente</span>
+    <div class="view-toggle">
+      <button class="view-btn active" onclick="setView('client')">Cliente</button>
+      <button class="view-btn" onclick="setView('internal')">Interno</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- KPIs CLIENTE -->
+  <div class="section-title">Resumen del mes</div>
+  <div class="kpi-grid">
+
+    <div class="kpi-card" style="--accent-color:#e94560">
+      <div class="kpi-label">Ventas Totales</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-delta delta-up">↑ 13,7% vs mayo 2025</div>
+      <div class="kpi-sub">5.637 € el año anterior</div>
+    </div>
+
+    <div class="kpi-card" style="--accent-color:#4ade80">
+      <div class="kpi-label">Unidades Vendidas</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-delta delta-up">↑ vs mayo 2025</div>
+      <div class="kpi-sub">Tasa devolución: 1,49%</div>
+    </div>
+
+    <div class="kpi-card" style="--accent-color:#facc15">
+      <div class="kpi-label">ROAS</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-delta" style="color:var(--text2)">→ Igual que mayo 2025</div>
+      <div class="kpi-sub">Por cada €1 invertido → €1,91</div>
+    </div>
+
+    <div class="kpi-card" style="--accent-color:#fb923c">
+      <div class="kpi-label">TACoS</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-delta delta-up">↑ ligero vs 7% año ant.</div>
+      <div class="kpi-sub">Inversión / Ventas totales</div>
+    </div>
+
+  </div>
+
+  <!-- KPIs INTERNOS -->
+  <div class="kpi-grid internal-only" style="margin-top:12px">
+    <div class="kpi-card" style="--accent-color:#a78bfa">
+      <div class="kpi-label">Inversión PPC</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-delta delta-down">↑ 28,6% vs mayo 2025</div>
+      <div class="kpi-sub">385 € el año anterior</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:#a78bfa">
+      <div class="kpi-label">ACoS</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-delta" style="color:var(--text2)">→ Estable vs 52,4% año ant.</div>
+      <div class="kpi-sub">Inversión / Ventas PPC</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:#a78bfa">
+      <div class="kpi-label">Ventas PPC</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-delta delta-up">↑ 28,9% vs mayo 2025</div>
+      <div class="kpi-sub">735 € el año anterior</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:#a78bfa">
+      <div class="kpi-label">CPC Medio</div>
+      <div class="kpi-value">—</div>
+      <div class="kpi-delta delta-up">↓ Mejorado vs 0,65 € año ant.</div>
+      <div class="kpi-sub">Conversión: 6,78%</div>
+    </div>
+  </div>
+
+  <!-- ORGÁNICO VS PPC -->
+  <div class="section-title">Distribución de ventas</div>
+  <div class="charts-3col">
+    <div class="chart-card">
+      <div class="chart-title">Orgánico vs PPC</div>
+      <div class="chart-sub">Desglose de las ventas totales de mayo 2026</div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="chartOrgPPC"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Distribución</div>
+      <div class="chart-sub">% sobre ventas totales</div>
+      <div style="margin-top:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px">Ventas Orgánicas</div>
+        <div style="font-size:28px;font-weight:800;color:var(--green)">85,2%</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:20px">5.458 €</div>
+        <div class="split-bar">
+          <div class="split-org" style="width:85.2%"></div>
+          <div class="split-ppc" style="width:14.8%"></div>
+        </div>
+        <div class="split-legend" style="margin-top:10px">
+          <span><span class="split-dot" style="background:var(--accent2);display:inline-block"></span><span style="font-size:10px;color:var(--text2)">Orgánico 85%</span></span>
+          <span><span class="split-dot" style="background:var(--accent);display:inline-block"></span><span style="font-size:10px;color:var(--text2)">PPC 15%</span></span>
+        </div>
+        <div style="margin-top:20px;font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px">Ventas PPC</div>
+        <div style="font-size:28px;font-weight:800;color:var(--accent)">14,8%</div>
+        <div style="font-size:11px;color:var(--text2)">948 €</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP PRODUCTOS -->
+  <div class="section-title">Rendimiento por producto — Top 12</div>
+  <div class="charts-2col">
+    <div class="chart-card">
+      <div class="chart-title">Ventas por producto (€)</div>
+      <div class="chart-sub">Pendiente · Ordenado por ventas</div>
+      <div class="chart-wrap" style="height:340px">
+        <canvas id="chartProductos"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Top productos</div>
+      <div class="chart-sub">Ventas, unidades y beneficio neto</div>
+      <div class="table-card" style="border:none;background:transparent">
+        <div class="table-header table-productos" style="background:transparent">
+          <span>Producto</span><span style="text-align:right">Ventas</span><span style="text-align:right">Uds.</span><span style="text-align:right">Benef.</span>
+        </div>
+        <div id="tablaProductos"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARTERAS PPC (CLIENTE + INTERNO) -->
+  <div class="section-title">Rendimiento por cartera — PPC</div>
+  <div class="charts-2col">
+    <div class="chart-card">
+      <div class="chart-title">Inversión vs Ventas PPC por cartera</div>
+      <div class="chart-sub">Solo carteras con ventas PPC registradas · Pendiente</div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="chartCarteras"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">ACoS por cartera</div>
+      <div class="chart-sub">Verde &lt;30% · Amarillo 30-50% · Rojo &gt;50%</div>
+      <div id="acosCarteras" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- TACOS POR CARTERA -->
+  <div class="charts-2col" style="margin-top:16px">
+    <div class="chart-card">
+      <div class="chart-title">TACoS por cartera</div>
+      <div class="chart-sub">Inversión publicitaria / Ventas totales del producto · Cuanto menor, mejor</div>
+      <div id="tacosCarteras" style="margin-top:8px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">ROAS por cartera</div>
+      <div class="chart-sub">Retorno sobre inversión publicitaria · Por cada €1 invertido</div>
+      <div id="roasCarteras" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- TABLA CAMPAÑAS (SOLO INTERNO) -->
+  <div class="internal-only">
+    <div class="section-title">Detalle de campañas activas</div>
+    <div class="table-card">
+      <div class="table-header table-campanas">
+        <span>Campaña</span>
+        <span style="text-align:right">Inversión</span>
+        <span style="text-align:right">PPC Ventas</span>
+        <span style="text-align:right">ACoS</span>
+        <span style="text-align:right">ROAS</span>
+        <span style="text-align:center">Estado</span>
+      </div>
+      <div id="tablaCampanas"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  Generado por <strong>Grow Studio</strong> · Datos exportados de Sellerboard · Pendiente<br>
+  <span style="font-size:10px;opacity:0.5;margin-top:4px;display:block">Este informe es confidencial y está destinado exclusivamente al cliente indicado.</span>
+</div>
+
+<script>
+// ── DATOS ──────────────────────────────────────────────────────────────────
+const productos = [];
+
+const carteras = [];
+
+const carterasConPPC = carteras.filter(c => c.ppc_sales > 0);
+
+// ── VISTA TOGGLE ──────────────────────────────────────────────────────────
+function setView(v) {
+  document.body.className = 'view-' + v;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.view-btn[onclick="setView('${v}')"]`).classList.add('active');
+  setTimeout(() => { Object.values(charts).forEach(c => c && c.resize()); }, 50);
+}
+
+// ── CHART DEFAULTS ────────────────────────────────────────────────────────
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = '#2d3748';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+const charts = {};
+
+// ── CHART: ORGÁNICO VS PPC ─────────────────────────────────────────────
+charts.orgPPC = new Chart(document.getElementById('chartOrgPPC'), {
+  type: 'bar',
+  data: {
+    labels: ['Mayo 2025', 'Pendiente'],
+    datasets: [
+      { label: 'Orgánico', data: [4901.93, 5458.36], backgroundColor: '#0f3460', borderRadius: 4 },
+      { label: 'PPC', data: [735.13, 948.30], backgroundColor: '#e94560', borderRadius: 4 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 16, font: { size: 11 } } }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-ES', {minimumFractionDigits:0})} €` } } },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+      y: { stacked: true, ticks: { callback: v => v.toLocaleString('es-ES') + ' €', font: { size: 10 } }, grid: { color: '#2d3748' } }
+    }
+  }
+});
+
+// ── CHART: PRODUCTOS ──────────────────────────────────────────────────
+charts.productos = new Chart(document.getElementById('chartProductos'), {
+  type: 'bar',
+  data: {
+    labels: productos.map(p => p.nombre),
+    datasets: [{
+      label: 'Ventas (€)',
+      data: productos.map(p => p.ventas),
+      backgroundColor: productos.map((_, i) => i < 3 ? '#e94560' : i < 6 ? '#fb923c' : '#0f3460'),
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x.toLocaleString('es-ES', {minimumFractionDigits:2})} €` } } },
+    scales: {
+      x: { ticks: { callback: v => v + ' €', font: { size: 10 } }, grid: { color: '#2d3748' } },
+      y: { ticks: { font: { size: 10 } }, grid: { display: false } }
+    }
+  }
+});
+
+// ── TABLA PRODUCTOS ───────────────────────────────────────────────────
+const tablaP = document.getElementById('tablaProductos');
+productos.forEach((p, i) => {
+  const row = document.createElement('div');
+  row.className = 'table-row table-productos';
+  row.innerHTML = `
+    <span style="font-weight:${i<3?'700':'400'};color:${i<3?'var(--text)':'var(--text2)'}">${p.nombre}</span>
+    <span style="text-align:right;font-weight:600">${p.ventas.toLocaleString('es-ES',{minimumFractionDigits:2})} €</span>
+    <span style="text-align:right;color:var(--text2)">${p.unidades}</span>
+    <span style="text-align:right;color:var(--green)">${p.beneficio.toLocaleString('es-ES',{minimumFractionDigits:2})} €</span>
+  `;
+  tablaP.appendChild(row);
+});
+
+// ── CHART: CARTERAS ───────────────────────────────────────────────────
+charts.carteras = new Chart(document.getElementById('chartCarteras'), {
+  type: 'bar',
+  data: {
+    labels: carterasConPPC.map(c => c.nombre),
+    datasets: [
+      { label: 'Inversión', data: carterasConPPC.map(c => c.spend), backgroundColor: '#0f3460', borderRadius: 4 },
+      { label: 'Ventas PPC', data: carterasConPPC.map(c => c.ppc_sales), backgroundColor: '#e94560', borderRadius: 4 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 16, font: { size: 11 } } }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-ES',{minimumFractionDigits:2})} €` } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+      y: { ticks: { callback: v => v + ' €', font: { size: 10 } }, grid: { color: '#2d3748' } }
+    }
+  }
+});
+
+// ── ACOS POR CARTERA ──────────────────────────────────────────────────
+const acosEl = document.getElementById('acosCarteras');
+carterasConPPC.forEach(c => {
+  const pct = Math.min(c.acos, 120);
+  const color = c.acos < 30 ? '#4ade80' : c.acos < 50 ? '#facc15' : '#f87171';
+  const badge = c.acos < 30 ? 'badge-green' : c.acos < 50 ? 'badge-yellow' : 'badge-red';
+  acosEl.innerHTML += `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:600;color:var(--text)">${c.nombre}</span>
+        <span class="badge ${badge}">${c.acos}%</span>
+      </div>
+      <div class="acos-bar">
+        <div class="acos-fill" style="width:${pct/1.2}%;background:${color}"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text2);margin-top:2px">ROAS ${c.roas}x · Inversión ${c.spend.toLocaleString('es-ES',{minimumFractionDigits:2})} €</div>
+    </div>
+  `;
+});
+
+// ── TACOS POR CARTERA ─────────────────────────────────────────────────
+// TACoS = inversión / ventas totales por cartera
+// Mapeamos cartera → ventas del CSV de productos (aproximación por nombre)
+const ventasPorCartera = {};
+
+const tacosEl = document.getElementById('tacosCarteras');
+carterasConPPC.forEach(c => {
+  const ventasTotales = ventasPorCartera[c.nombre] || (c.ppc_sales * 1.5);
+  const tacos = ventasTotales > 0 ? ((c.spend / ventasTotales) * 100) : 0;
+  const tacosRedondeado = Math.round(tacos * 10) / 10;
+  const pct = Math.min(tacos, 60);
+  const color = tacos < 10 ? '#4ade80' : tacos < 20 ? '#facc15' : '#f87171';
+  const badge = tacos < 10 ? 'badge-green' : tacos < 20 ? 'badge-yellow' : 'badge-red';
+  tacosEl.innerHTML += `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:600;color:var(--text)">${c.nombre}</span>
+        <span class="badge ${badge}">${tacosRedondeado}%</span>
+      </div>
+      <div class="acos-bar">
+        <div class="acos-fill" style="width:${(pct/60)*100}%;background:${color}"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text2);margin-top:2px">Inversión ${c.spend.toFixed(2)} € · Ventas totales ~${ventasTotales.toFixed(0)} €</div>
+    </div>
+  `;
+});
+
+// ── ROAS POR CARTERA ──────────────────────────────────────────────────
+const roasEl = document.getElementById('roasCarteras');
+const maxRoas = Math.max(...carterasConPPC.map(c => c.roas));
+carterasConPPC.forEach(c => {
+  const pct = (c.roas / maxRoas) * 100;
+  const color = c.roas >= 5 ? '#4ade80' : c.roas >= 2 ? '#facc15' : '#f87171';
+  const badge = c.roas >= 5 ? 'badge-green' : c.roas >= 2 ? 'badge-yellow' : 'badge-red';
+  roasEl.innerHTML += `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:600;color:var(--text)">${c.nombre}</span>
+        <span class="badge ${badge}">${c.roas}x</span>
+      </div>
+      <div class="acos-bar">
+        <div class="acos-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text2);margin-top:2px">PPC Ventas ${c.ppc_sales.toFixed(2)} € · Inversión ${c.spend.toFixed(2)} €</div>
+    </div>
+  `;
+});
+
+// ── TABLA CAMPAÑAS ────────────────────────────────────────────────────
+const tablaCamp = document.getElementById('tablaCampanas');
+const campData = [];
+
+campData.forEach(c => {
+  const estadoBadge = c.estado === 'ok' ? '<span class="badge badge-green">OK</span>'
+    : c.estado === 'warn' ? '<span class="badge badge-yellow">Revisar</span>'
+    : c.estado === 'alerta' ? '<span class="badge badge-red">⚠ Alerta</span>'
+    : '<span class="badge badge-orange">Sin datos</span>';
+  const row = document.createElement('div');
+  row.className = 'table-row table-campanas';
+  row.innerHTML = `
+    <span style="font-size:11px;font-weight:600">${c.nombre}</span>
+    <span style="text-align:right;font-size:11px">${c.spend.toFixed(2)} €</span>
+    <span style="text-align:right;font-size:11px">${c.ppc > 0 ? c.ppc.toFixed(2)+' €' : '—'}</span>
+    <span style="text-align:right;font-size:11px;color:${c.acos>50?'var(--red)':c.acos>30?'var(--yellow)':'var(--green)'}">${c.acos > 0 ? c.acos+'%' : '—'}</span>
+    <span style="text-align:right;font-size:11px">${c.roas > 0 ? c.roas+'x' : '—'}</span>
+    <span style="text-align:center">${estadoBadge}</span>
+  `;
+  tablaCamp.appendChild(row);
+});
+</script>
+</body>
+</html>
