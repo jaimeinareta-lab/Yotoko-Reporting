@@ -216,7 +216,7 @@
       <div class="section-header"><div class="section-title">Top productos</div><div class="section-line"></div></div>
       <div class="chart-card">
         <table class="data-table">
-          <thead><tr><th>#</th><th>Producto</th><th>ASIN</th><th style="text-align:right;">Ventas</th><th style="text-align:right;">Unidades</th><th style="text-align:right;">PPC Gasto</th></tr></thead>
+          <thead><tr><th>#</th><th>Producto</th><th style="text-align:right;">Ventas</th><th style="text-align:right;">Unidades</th><th style="text-align:right;">PPC Gasto</th><th style="text-align:right;">% s/total</th></tr></thead>
           <tbody id="bodyProductos"><tr><td colspan="6" class="no-data">Cargando...</td></tr></tbody>
         </table>
       </div>
@@ -406,11 +406,12 @@
     const top10=[...productos].sort((a,b)=>(b.ventas_totales||0)-(a.ventas_totales||0)).slice(0,10);
     const bodyP=document.getElementById('bodyProductos');
     bodyP.innerHTML=top10.length?top10.map((p,i)=>{
+      const pct=totalVentas>0?((p.ventas_totales||0)/totalVentas*100):0;
       return `<tr><td style="color:var(--ink-light);font-size:12px;">${i+1}</td>
-        <td>${(p.titulo||'—').split('|')[0].trim().substring(0,55)}</td>
-        <td class="td-mono">${p.asin||'—'}</td>
+        <td>${(p.titulo||'—').split('|')[0].trim().substring(0,60)}</td>
         <td class="td-num">${fmtEur(p.ventas_totales)}</td><td class="td-num">${fmt(p.unidades_vendidas)}</td>
-        <td class="td-num"><span class="badge badge-neu">${fmtEur(p.ppc_gasto)}</span></td></tr>`;
+        <td class="td-num"><span class="badge badge-neu">${fmtEur(p.ppc_gasto)}</span></td>
+        <td class="td-num"><span class="badge ${pct>=10?'badge-pos':pct>=3?'badge-neu':'badge-neg'}">${fmt(pct,1)}%</span></td></tr>`;
     }).join(''):'<tr><td colspan="6" class="no-data">Sin datos de productos.</td></tr>';
 
     const top10c=campanas.slice(0,10);
