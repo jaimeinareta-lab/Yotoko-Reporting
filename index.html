@@ -8,18 +8,18 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg: #0D0D0F;
-      --surface: #16161A;
-      --surface2: #1E1E24;
-      --border: #2A2A32;
-      --ink: #F2F2F0;
-      --ink-mid: #9999A8;
-      --ink-light: #55556A;
-      --accent: #FF3B5C;
-      --accent2: #4B6EFF;
-      --positive: #2ECC7A;
-      --negative: #FF3B5C;
-      --neutral: #9999A8;
+      --bg: #F2F2F0;
+      --surface: #FFFFFF;
+      --surface2: #EBEBEB;
+      --border: #D8D8D8;
+      --ink: #0D0D0D;
+      --ink-mid: #555555;
+      --ink-light: #999999;
+      --accent: #0D0D0D;
+      --accent2: #1A56DB;
+      --positive: #16A34A;
+      --negative: #DC2626;
+      --neutral: #555555;
       --font: 'Inter', system-ui, sans-serif;
       --radius: 8px;
     }
@@ -32,14 +32,14 @@
       background: var(--surface); position: sticky; top: 0; z-index: 100;
     }
     .header-left { display: flex; align-items: center; gap: 20px; }
-    .logo { font-size: 14px; font-weight: 900; color: var(--accent); letter-spacing: -0.01em; text-transform: uppercase; }
+    .logo { font-size: 14px; font-weight: 900; color: var(--ink); letter-spacing: -0.01em; text-transform: uppercase; }
     .logo span { font-weight: 300; color: var(--ink); letter-spacing: 0.08em; }
     .divider { width: 1px; height: 20px; background: var(--border); }
     .client-name { font-size: 14px; font-weight: 600; color: var(--ink); }
-    .period-badge { background: var(--accent); color: white; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; }
+    .period-badge { background: var(--ink); color: var(--surface); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; }
     .view-toggle { display: flex; gap: 2px; background: var(--bg); padding: 3px; border-radius: 6px; }
     .view-btn { padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; background: transparent; cursor: pointer; color: var(--ink-mid); border-radius: 4px; transition: all 0.15s; font-family: var(--font); }
-    .view-btn.active { background: var(--surface2); color: var(--ink); }
+    .view-btn.active { background: var(--ink); color: var(--surface); }
 
     .container { max-width: 1200px; margin: 0 auto; padding: 40px 40px 80px; }
 
@@ -55,10 +55,10 @@
 
     .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px; position: relative; overflow: hidden; }
-    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); opacity: 0.4; }
-    .kpi-card.positive::before { background: var(--positive); opacity: 0.6; }
-    .kpi-card.negative::before { background: var(--negative); opacity: 0.6; }
-    .kpi-card.blue::before { background: var(--accent2); opacity: 0.6; }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); opacity: 0.15; }
+    .kpi-card.positive::before { background: var(--positive); opacity: 0.8; }
+    .kpi-card.negative::before { background: var(--negative); opacity: 0.8; }
+    .kpi-card.blue::before { background: var(--accent2); opacity: 0.8; }
     .kpi-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-light); margin-bottom: 10px; }
     .kpi-value { font-size: 28px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; color: var(--ink); }
     .kpi-value.positive { color: var(--positive); }
@@ -81,9 +81,9 @@
     .td-mono { font-family: monospace; font-size: 12px; color: var(--ink-mid); }
 
     .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
-    .badge-pos { background: rgba(46,204,122,0.15); color: var(--positive); }
-    .badge-neg { background: rgba(255,59,92,0.15); color: var(--negative); }
-    .badge-neu { background: var(--surface2); color: var(--ink-mid); }
+    .badge-pos { background: rgba(22,163,74,0.12); color: var(--positive); }
+    .badge-neg { background: rgba(220,38,38,0.1); color: var(--negative); }
+    .badge-neu { background: var(--surface2); color: var(--ink-mid); border: 1px solid var(--border); }
 
     .donut-stats { display: flex; flex-direction: column; gap: 16px; justify-content: center; padding-left: 8px; }
     .donut-stat-label { font-size: 12px; color: var(--ink-mid); margin-bottom: 2px; }
@@ -97,7 +97,7 @@
     .no-data { padding: 32px; text-align: center; font-size: 13px; color: var(--ink-light); }
 
     .footer { margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .footer-logo { font-size: 13px; font-weight: 900; color: var(--accent); text-transform: uppercase; }
+    .footer-logo { font-size: 13px; font-weight: 900; color: var(--ink); text-transform: uppercase; }
     .footer-logo span { font-weight: 300; color: var(--ink-mid); letter-spacing: 0.08em; }
     .footer p { font-size: 12px; color: var(--ink-light); }
 
@@ -175,13 +175,13 @@
             <div class="chart-wrap" style="width:150px;height:150px;flex-shrink:0;"><canvas id="chartDonut"></canvas></div>
             <div class="donut-stats">
               <div>
-                <div class="donut-stat-label"><span class="dot" style="background:var(--positive);"></span>Orgánicas</div>
+                <div class="donut-stat-label"><span class="dot" style="background:#16A34A;"></span>Orgánicas</div>
                 <div class="donut-stat-value positive" id="donutOrg">—</div>
                 <div class="donut-stat-sub" id="donutOrgEur">—</div>
               </div>
               <div>
-                <div class="donut-stat-label"><span class="dot" style="background:var(--accent);"></span>PPC</div>
-                <div class="donut-stat-value" style="color:var(--accent);" id="donutPpc">—</div>
+                <div class="donut-stat-label"><span class="dot" style="background:#0D0D0D;"></span>PPC</div>
+                <div class="donut-stat-value" style="color:#0D0D0D;" id="donutPpc">—</div>
                 <div class="donut-stat-sub" id="donutPpcEur">—</div>
               </div>
             </div>
@@ -293,13 +293,13 @@
         plugins:{
           legend:{
             display:opts.legend??false,
-            labels:{color:'#9999A8',font:{size:11,family:'Inter'},boxWidth:10,padding:12}
+            labels:{color:'#555555',font:{size:11,family:'Inter'},boxWidth:10,padding:12}
           },
-          tooltip:{backgroundColor:'#1E1E24',borderColor:'#2A2A32',borderWidth:1,titleColor:'#F2F2F0',bodyColor:'#9999A8',padding:12}
+          tooltip:{backgroundColor:'#FFFFFF',borderColor:'#D8D8D8',borderWidth:1,titleColor:'#0D0D0D',bodyColor:'#555555',padding:12}
         },
         scales: type==='doughnut' ? undefined : {
-          x:{ticks:{color:'#55556A',font:{size:11,family:'Inter'},callback:opts.xFmt||null},grid:{color:'#2A2A32'},stacked:opts.stacked||false},
-          y:{ticks:{color:'#9999A8',font:{size:11,family:'Inter'},callback:opts.yFmt||null},grid:{display:isHoriz?false:true,color:'#2A2A32'},stacked:opts.stacked||false}
+          x:{ticks:{color:'#999999',font:{size:11,family:'Inter'},callback:opts.xFmt||null},grid:{color:'#E5E5E5'},stacked:opts.stacked||false},
+          y:{ticks:{color:'#555555',font:{size:11,family:'Inter'},callback:opts.yFmt||null},grid:{display:isHoriz?false:true,color:'#E5E5E5'},stacked:opts.stacked||false}
         }
       }
     });
@@ -355,7 +355,7 @@
     document.getElementById('donutPpc').textContent=`${fmt(pctPPC,1)}%`;
     document.getElementById('donutPpcEur').textContent=fmtEur(ventasPPC);
     makeChart('chartDonut','doughnut',['Orgánico','PPC'],
-      [{data:[pctOrg,pctPPC],backgroundColor:['#2ECC7A','#FF3B5C'],borderWidth:0,hoverOffset:4}],
+      [{data:[pctOrg,pctPPC],backgroundColor:['#16A34A','#DC2626'],borderWidth:0,hoverOffset:4}],
       {legend:false,extra:{cutout:'72%'}}
     );
 
@@ -363,8 +363,8 @@
     makeChart('chartProductos','bar',
       top8.map(p=>(p.titulo||p.asin||'—').split('|')[0].trim().substring(0,28)),
       [
-        {label:'Orgánico',data:top8.map(p=>Math.max(0,(p.ventas_totales||0)-(p.ppc_ventas||0))),backgroundColor:'#2ECC7A',borderRadius:3,borderSkipped:false},
-        {label:'PPC',data:top8.map(p=>p.ppc_ventas||0),backgroundColor:'#FF3B5C',borderRadius:3,borderSkipped:false},
+        {label:'Orgánico',data:top8.map(p=>Math.max(0,(p.ventas_totales||0)-(p.ppc_ventas||0))),backgroundColor:'#16A34A',borderRadius:3,borderSkipped:false},
+        {label:'PPC',data:top8.map(p=>p.ppc_ventas||0),backgroundColor:'#DC2626',borderRadius:3,borderSkipped:false},
       ],
       {legend:true,indexAxis:'y',stacked:true,xFmt:v=>fmtEur(v)}
     );
@@ -381,7 +381,7 @@
     makeChart('chartRoasCarteras','bar',
       cartArr.map(([n])=>n.substring(0,20)),
       [{data:cartArr.map(([,d])=>d.inv>0?+(d.ven/d.inv).toFixed(2):0),
-        backgroundColor:cartArr.map(([,d])=>{const r=d.inv>0?d.ven/d.inv:0;return r>=3?'#2ECC7A':r>=2?'#4B6EFF':'#FF3B5C';}),
+        backgroundColor:cartArr.map(([,d])=>{const r=d.inv>0?d.ven/d.inv:0;return r>=3?'#16A34A':r>=2?'#1A56DB':'#DC2626';}),
         borderRadius:4,borderSkipped:false}],
       {yFmt:v=>`${v}x`}
     );
@@ -389,8 +389,8 @@
     makeChart('chartInvVentas','bar',
       cartArr.map(([n])=>n.substring(0,20)),
       [
-        {label:'Inversión',data:cartArr.map(([,d])=>d.inv),backgroundColor:'rgba(75,110,255,0.7)',borderRadius:3,borderSkipped:false},
-        {label:'Ventas PPC',data:cartArr.map(([,d])=>d.ven),backgroundColor:'rgba(46,204,122,0.7)',borderRadius:3,borderSkipped:false},
+        {label:'Inversión',data:cartArr.map(([,d])=>d.inv),backgroundColor:'rgba(26,86,219,0.7)',borderRadius:3,borderSkipped:false},
+        {label:'Ventas PPC',data:cartArr.map(([,d])=>d.ven),backgroundColor:'rgba(22,163,74,0.7)',borderRadius:3,borderSkipped:false},
       ],
       {legend:true,yFmt:v=>fmtEur(v)}
     );
@@ -418,8 +418,8 @@
     makeChart('chartCampanas','bar',
       top10c.map(c=>(c.campana_nombre||c.campana_id||'—').substring(0,30)),
       [
-        {label:'Inversión',data:top10c.map(c=>c.gasto||0),backgroundColor:'rgba(75,110,255,0.8)',borderRadius:3,borderSkipped:false},
-        {label:'Ventas',data:top10c.map(c=>c.ventas||0),backgroundColor:'rgba(46,204,122,0.8)',borderRadius:3,borderSkipped:false},
+        {label:'Inversión',data:top10c.map(c=>c.gasto||0),backgroundColor:'rgba(26,86,219,0.8)',borderRadius:3,borderSkipped:false},
+        {label:'Ventas',data:top10c.map(c=>c.ventas||0),backgroundColor:'rgba(22,163,74,0.8)',borderRadius:3,borderSkipped:false},
       ],
       {legend:true,indexAxis:'y',xFmt:v=>fmtEur(v)}
     );
