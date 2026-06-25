@@ -113,6 +113,25 @@
       .chart-grid-2, .chart-grid-3 { grid-template-columns: 1fr; }
       .hbar-label { width: 120px; }
     }
+
+    .hbar-label { position: relative; cursor: default; }
+    .hbar-label[title]:hover::after {
+      content: attr(title);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 0;
+      background: rgba(13,13,13,0.92);
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 11px;
+      white-space: normal;
+      word-break: break-word;
+      max-width: 320px;
+      z-index: 9999;
+      pointer-events: none;
+      line-height: 1.4;
+    }
   </style>
 </head>
 <body>
@@ -219,6 +238,14 @@
           <thead><tr><th>#</th><th>Producto</th><th style="text-align:right;">Ventas</th><th style="text-align:right;">Unidades</th><th style="text-align:right;">PPC Gasto</th><th style="text-align:right;">% s/total</th></tr></thead>
           <tbody id="bodyProductos"><tr><td colspan="6" class="no-data">Cargando...</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+
+    <div class="section">
+      <div class="section-header"><div class="section-title">Top campañas por inversión</div><div class="section-line"></div></div>
+      <div class="chart-card">
+        <div id="chartCampanas"></div>
       </div>
     </div>
 
@@ -449,6 +476,51 @@
     document.getElementById('loadingState').style.display='none';
     document.getElementById('content').style.display='block';
   }
+
+
+    // Nombre de campaña sin etiqueta de fecha [dd/mm]
+    function stripFecha(nombre) {
+      return (nombre||'—').replace(/\s*-\s*\[\d{2}\/\d{2}\]\s*$/,'').trim();
+    }
+
+    function renderCampanas(campanas) {
+      const el = document.getElementById('chartCampanas');
+      if (!el) return;
+      const top10 = campanas.slice(0, 10);
+      if (!top10.length) { el.innerHTML='<p class="no-data">Sin datos de campañas.</p>'; return; }
+      const maxInv = Math.max(...top10.map(c => c.gasto||0), 1);
+      const maxVen = Math.max(...top10.map(c => c.ventas||0), 1);
+      el.innerHTML =
+        '<div class="hbar-legend">' +
+          '<div class="hbar-legend-item"><div class="hbar-legend-dot" style="background:#1A56DB;"></div>Inversión</div>' +
+          '<div class="hbar-legend-item"><div class="hbar-legend-dot" style="background:#16A34A;"></div>Ventas PPC</div>' +
+        '</div>' +
+        '<div class="hbar-wrap" style="margin-top:12px;">' +
+        top10.map(c => {
+          const nombre = stripFecha(c.campana_nombre);
+          const invPct = Math.max(Math.round(((c.gasto||0)/maxInv)*100), 1);
+          const venPct = Math.max(Math.round(((c.ventas||0)/maxVen)*100), 1);
+          const roas = c.gasto > 0 ? fmt(c.ventas/c.gasto,2)+'x' : '—';
+          return '<div class="hbar-row">' +
+            '<div class="hbar-label" title="'+nombre+'">'+nombre+'</div>' +
+            '<div style="flex:1;display:flex;flex-direction:column;gap:3px;">' +
+              '<div style="display:flex;align-items:center;gap:6px;">' +
+                '<div style="flex:1;height:10px;background:var(--surface2);border-radius:2px;overflow:hidden;">' +
+                  '<div style="width:'+invPct+'%;height:100%;background:#1A56DB;border-radius:2px;"></div>' +
+                '</div>' +
+                '<span style="width:68px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;">'+fmtEur(c.gasto||0)+'</span>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:6px;">' +
+                '<div style="flex:1;height:10px;background:var(--surface2);border-radius:2px;overflow:hidden;">' +
+                  '<div style="width:'+venPct+'%;height:100%;background:#16A34A;border-radius:2px;"></div>' +
+                '</div>' +
+                '<span style="width:68px;font-size:11px;color:var(--ink-light);text-align:right;white-space:nowrap;">'+roas+'</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+        '</div>';
+    }
 
   init();
 </script>
