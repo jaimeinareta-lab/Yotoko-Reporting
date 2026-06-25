@@ -89,7 +89,7 @@
     .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 
     .hbar-wrap { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
-    .hbar-row { display: flex; align-items: center; gap: 12px; }
+    .hbar-row { display: flex; align-items: center; gap: 12px; position: relative; }
     .hbar-label { width: 180px; font-size: 11px; color: var(--ink-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
     .hbar-bar-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
     .hbar-bar { display: flex; height: 18px; border-radius: 3px; overflow: hidden; min-width: 2px; }
@@ -114,8 +114,8 @@
       .hbar-label { width: 120px; }
     }
 
-    .hbar-label { position: relative; cursor: default; }
-    .hbar-label[title]:hover::after {
+    .hbar-label { cursor: default; }
+    .hbar-row[title]:hover::after {
       content: attr(title);
       position: absolute;
       bottom: calc(100% + 6px);
@@ -133,7 +133,7 @@
       line-height: 1.4;
     }
 
-    .titulo-cell { cursor: default; transition: background 0.1s; }
+    .titulo-cell { cursor: pointer; user-select: none; transition: background 0.1s; }
     .titulo-cell:hover { background: var(--surface2); border-radius: 3px; }
     .titulo-cell-editing input { width:100%; font-size:inherit; font-family:inherit;
       border:1px solid var(--accent2); border-radius:3px; padding:2px 6px;
@@ -361,7 +361,7 @@
       </div>`;
     // Attach editable handlers to hbar labels
     el.querySelectorAll('.titulo-cell').forEach(function(cell) {
-      cell.ondblclick = function() { makeEditable(this); };
+      cell.ondblclick = function(e) { e.preventDefault(); makeEditable(this); };
     });
   }
 
@@ -452,6 +452,12 @@
     );
 
     // Top 8 productos — barras HTML con etiquetas estáticas
+    // Aplicar overrides de localStorage antes de renderizar
+    prodAgg.forEach(function(p) {
+      const ov = getTituloOverride(p.asin, p.sku);
+      if (ov) p.titulo = ov;
+    });
+
     const top8 = prodAgg.slice(0, 8).map(p => ({
       ...p,
       _org: Math.max(0, (p.ventas_totales||0) - (p.ppc_ventas||0)),
@@ -493,12 +499,6 @@
         <td class="td-num"><span class="badge ${roas>=3?'badge-pos':roas>=2?'badge-neu':'badge-neg'}">${fmt(roas,2)}x</span></td>
         <td class="td-num"><span class="badge ${acos<=20?'badge-pos':acos<=35?'badge-neu':'badge-neg'}">${fmt(acos,1)}%</span></td></tr>`;
     }).join(''):'<tr><td colspan="5" class="no-data">Sin datos de carteras.</td></tr>';
-
-    // Aplicar overrides de localStorage antes de renderizar
-    prodAgg.forEach(function(p) {
-      const ov = getTituloOverride(p.asin, p.sku);
-      if (ov) p.titulo = ov;
-    });
 
     const bodyP=document.getElementById('bodyProductos');
     bodyP.innerHTML=prodAgg.length?prodAgg.slice(0,10).map((p,i)=>{
@@ -597,7 +597,7 @@
         cell.setAttribute('title', val + ' (doble clic para editar)');
         // Update row title tooltip too
         if (cell.closest('.hbar-row')) cell.closest('.hbar-row').title = val;
-        cell.ondblclick = function() { makeEditable(this); };
+        cell.ondblclick = function(e) { e.preventDefault(); makeEditable(this); };
       }
       input.addEventListener('blur', save);
       input.addEventListener('keydown', function(e) {
@@ -611,7 +611,7 @@
     }
     function attachEditHandlers() {
       document.querySelectorAll('#bodyProductos .titulo-cell, #chartProductos .titulo-cell').forEach(function(cell) {
-        cell.ondblclick = function() { makeEditable(this); };
+        cell.ondblclick = function(e) { e.preventDefault(); makeEditable(this); };
       });
     }
 
