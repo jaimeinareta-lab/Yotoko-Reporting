@@ -132,6 +132,12 @@
       pointer-events: none;
       line-height: 1.4;
     }
+
+    .titulo-cell { cursor: default; transition: background 0.1s; }
+    .titulo-cell:hover { background: var(--surface2); border-radius: 3px; }
+    .titulo-cell-editing input { width:100%; font-size:inherit; font-family:inherit;
+      border:1px solid var(--accent2); border-radius:3px; padding:2px 6px;
+      background:var(--surface); color:var(--ink); outline:none; box-shadow:0 0 0 2px rgba(26,86,219,0.15); }
   </style>
 </head>
 <body>
@@ -481,15 +487,24 @@
         <td class="td-num"><span class="badge ${acos<=20?'badge-pos':acos<=35?'badge-neu':'badge-neg'}">${fmt(acos,1)}%</span></td></tr>`;
     }).join(''):'<tr><td colspan="5" class="no-data">Sin datos de carteras.</td></tr>';
 
+    // Aplicar overrides de localStorage antes de renderizar
+    prodAgg.forEach(function(p) {
+      const ov = getTituloOverride(p.asin, p.sku);
+      if (ov) p.titulo = ov;
+    });
+
     const bodyP=document.getElementById('bodyProductos');
     bodyP.innerHTML=prodAgg.length?prodAgg.slice(0,10).map((p,i)=>{
       const pct=totalVentas>0?((p.ventas_totales||0)/totalVentas*100):0;
+      const asinEsc=(p.asin||'').replace(/"/g,'&quot;');
+      const skuEsc=(p.sku||'').replace(/"/g,'&quot;');
       return `<tr><td style="color:var(--ink-light);font-size:12px;">${i+1}</td>
-        <td>${p.titulo.substring(0,60)}</td>
+        <td class="titulo-cell" data-asin="${asinEsc}" data-sku="${skuEsc}" title="${p.titulo} (doble clic para editar)">${p.titulo.substring(0,60)}</td>
         <td class="td-num">${fmtEur(p.ventas_totales)}</td><td class="td-num">${fmt(p.unidades_vendidas)}</td>
         <td class="td-num"><span class="badge badge-neu">${fmtEur(p.ppc_gasto)}</span></td>
         <td class="td-num"><span class="badge ${pct>=10?'badge-pos':pct>=3?'badge-neu':'badge-neg'}">${fmt(pct,1)}%</span></td></tr>`;
     }).join(''):'<tr><td colspan="6" class="no-data">Sin datos de productos.</td></tr>';
+    attachEditHandlers();
 
     renderCampanas(campanas);
 
@@ -540,6 +555,54 @@
           '</div>';
         }).join('') +
         '</div>';
+    }
+
+
+    // ── Títulos editables ──────────────────────────────────────────────
+    function _tituloStorageKey(asin, sku) {
+      return 'gs_titulo_' + CONFIG.clienteId + '_' + (asin || sku || '');
+    }
+    function getTituloOverride(asin, sku) {
+      try { return localStorage.getItem(_tituloStorageKey(asin, sku)) || null; } catch(e) { return null; }
+    }
+    function setTituloOverride(asin, sku, titulo) {
+      try { localStorage.setItem(_tituloStorageKey(asin, sku), titulo); } catch(e) {}
+    }
+    function makeEditable(cell) {
+      if (cell.querySelector('input')) return;
+      const asin = cell.dataset.asin || '';
+      const sku  = cell.dataset.sku  || '';
+      const current = cell.textContent.trim();
+      cell.classList.add('titulo-cell-editing');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = current;
+      cell.innerHTML = '';
+      cell.appendChild(input);
+      input.focus();
+      input.select();
+      function save() {
+        const val = input.value.trim() || current;
+        setTituloOverride(asin, sku, val);
+        cell.classList.remove('titulo-cell-editing');
+        cell.textContent = val.substring(0, 60);
+        cell.title = val + ' (doble clic para editar)';
+        attachEditHandlers();
+      }
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') input.blur();
+        if (e.key === 'Escape') {
+          cell.classList.remove('titulo-cell-editing');
+          cell.textContent = current.substring(0, 60);
+          attachEditHandlers();
+        }
+      });
+    }
+    function attachEditHandlers() {
+      document.querySelectorAll('#bodyProductos .titulo-cell').forEach(function(cell) {
+        cell.ondblclick = function() { makeEditable(this); };
+      });
     }
 
   init();
