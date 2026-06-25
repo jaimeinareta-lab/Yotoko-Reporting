@@ -340,8 +340,11 @@
         const barPct = Math.max(Math.round((total / maxVal) * 100), 1);
         const seg1Pct = total > 0 ? Math.round((v1 / total) * 100) : 0;
         const seg2Pct = 100 - seg1Pct;
-        return `<div class="hbar-row">
-          <div class="hbar-label" title="${p[labelKey]}">${p[labelKey]}</div>
+        const lbl = p[labelKey] || '—';
+        const asinEsc = (p.asin||'').replace(/"/g,'&quot;');
+        const skuEsc  = (p.sku||'').replace(/"/g,'&quot;');
+        return `<div class="hbar-row" title="${lbl}">
+          <div class="hbar-label titulo-cell" data-asin="${asinEsc}" data-sku="${skuEsc}" title="${lbl} (doble clic para editar)">${lbl}</div>
           <div class="hbar-bar-wrap">
             <div class="hbar-bar" style="width:${barPct}%;">
               <div class="hbar-seg" style="width:${seg1Pct}%;background:${val1Color};"></div>
@@ -356,6 +359,10 @@
         <div class="hbar-legend-item"><div class="hbar-legend-dot" style="background:${val1Color};"></div>${val1Label}</div>
         <div class="hbar-legend-item"><div class="hbar-legend-dot" style="background:${val2Color};"></div>${val2Label}</div>
       </div>`;
+    // Attach editable handlers to hbar labels
+    el.querySelectorAll('.titulo-cell').forEach(function(cell) {
+      cell.ondblclick = function() { makeEditable(this); };
+    });
   }
 
   async function init() {
@@ -466,15 +473,15 @@
       cartArr.map(([n])=>n),
       [{data:cartArr.map(([,d])=>d.inv>0?+(d.ven/d.inv).toFixed(2):0),
         backgroundColor:cartArr.map(([,d])=>{const r=d.inv>0?d.ven/d.inv:0;return r>=3?'#16A34A':r>=2?'#1A56DB':'#DC2626';}),
-        borderRadius:4,borderSkipped:false}],
+        borderRadius:4,borderSkipped:false,maxBarThickness:36}],
       {yFmt:v=>`${v}x`}
     );
 
     makeChart('chartInvVentas','bar',
       cartArr.map(([n])=>n),
       [
-        {label:'Inversión',data:cartArr.map(([,d])=>d.inv),backgroundColor:'rgba(26,86,219,0.7)',borderRadius:3,borderSkipped:false},
-        {label:'Ventas PPC',data:cartArr.map(([,d])=>d.ven),backgroundColor:'rgba(22,163,74,0.7)',borderRadius:3,borderSkipped:false},
+        {label:'Inversión',data:cartArr.map(([,d])=>d.inv),backgroundColor:'rgba(26,86,219,0.7)',borderRadius:3,borderSkipped:false,maxBarThickness:36},
+        {label:'Ventas PPC',data:cartArr.map(([,d])=>d.ven),backgroundColor:'rgba(22,163,74,0.7)',borderRadius:3,borderSkipped:false,maxBarThickness:36},
       ],
       {legend:true,yFmt:v=>fmtEur(v)}
     );
@@ -587,7 +594,10 @@
         cell.classList.remove('titulo-cell-editing');
         cell.textContent = val.substring(0, 60);
         cell.title = val + ' (doble clic para editar)';
-        attachEditHandlers();
+        cell.setAttribute('title', val + ' (doble clic para editar)');
+        // Update row title tooltip too
+        if (cell.closest('.hbar-row')) cell.closest('.hbar-row').title = val;
+        cell.ondblclick = function() { makeEditable(this); };
       }
       input.addEventListener('blur', save);
       input.addEventListener('keydown', function(e) {
@@ -600,7 +610,7 @@
       });
     }
     function attachEditHandlers() {
-      document.querySelectorAll('#bodyProductos .titulo-cell').forEach(function(cell) {
+      document.querySelectorAll('#bodyProductos .titulo-cell, #chartProductos .titulo-cell').forEach(function(cell) {
         cell.ondblclick = function() { makeEditable(this); };
       });
     }
