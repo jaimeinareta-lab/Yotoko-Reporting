@@ -252,10 +252,10 @@
 
   function extractCartera(nombre) {
     if (!nombre) return 'Sin cartera';
-    const parts = nombre.split(' - ');
+    const sinFecha = nombre.replace(/\s*-\s*\[\d{2}\/\d{2}\]\s*$/, '').trim();
+    const parts = sinFecha.split(' - ');
     if (parts.length >= 2) {
-      const last = parts[parts.length - 1].trim();
-      return last.replace(/\s*\[\d{2}\/\d{2}\]\s*$/, '').trim() || 'Sin cartera';
+      return parts[parts.length - 1].trim() || 'Sin cartera';
     }
     return 'Sin cartera';
   }
