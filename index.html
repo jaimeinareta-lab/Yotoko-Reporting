@@ -138,6 +138,37 @@
     .titulo-cell-editing input { width:100%; font-size:inherit; font-family:inherit;
       border:1px solid var(--accent2); border-radius:3px; padding:2px 6px;
       background:var(--surface); color:var(--ink); outline:none; box-shadow:0 0 0 2px rgba(26,86,219,0.15); }
+
+    .month-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 14px 24px 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .month-tab {
+      padding: 6px 14px;
+      border-radius: 6px 6px 0 0;
+      border: 1px solid transparent;
+      border-bottom: none;
+      background: transparent;
+      color: var(--ink2);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+      font-family: inherit;
+      position: relative;
+      bottom: -1px;
+    }
+    .month-tab:hover { background: var(--surface2); color: var(--ink); }
+    .month-tab.active {
+      background: var(--bg);
+      border-color: var(--border);
+      color: var(--accent2);
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -150,6 +181,8 @@
     <div class="period-badge" id="headerPeriod">—</div>
   </div>
 </header>
+
+<div id="monthTabs" class="month-tabs" style="display:none;"></div>
 
 <main class="container">
   <div class="loading-state" id="loadingState">
@@ -367,18 +400,53 @@
 
   async function init() {
     try {
-      const meses=await sbFetch('productos',{select:'mes',cliente_id:`eq.${CONFIG.clienteId}`,order:'mes.desc',limit:1});
-      if(!meses.length) throw new Error('Sin datos disponibles para este cliente.');
-      const mes=meses[0].mes;
-      const [productos,campanas]=await Promise.all([
-        sbFetch('productos',{select:'*',cliente_id:`eq.${CONFIG.clienteId}`,mes:`eq.${mes}`,order:'ventas_totales.desc'}),
-        sbFetch('campanas', {select:'*',cliente_id:`eq.${CONFIG.clienteId}`,mes:`eq.${mes}`,order:'gasto.desc'}),
+      // Obtener todos los meses con datos (productos y campañas)
+      const [mesesProd, mesesCamp] = await Promise.all([
+        sbFetch('productos', {select:'mes', cliente_id:`eq.${CONFIG.clienteId}`, order:'mes.desc'}),
+        sbFetch('campanas',  {select:'mes', cliente_id:`eq.${CONFIG.clienteId}`, order:'mes.desc'}),
       ]);
-      render(productos,campanas,mes);
+      const allMeses = [...new Set([
+        ...mesesProd.map(m => m.mes),
+        ...mesesCamp.map(m => m.mes),
+      ])].filter(Boolean).sort().reverse();
+      if (!allMeses.length) throw new Error('Sin datos disponibles para este cliente.');
+
+      // Renderizar pestañas
+      const tabsEl = document.getElementById('monthTabs');
+      tabsEl.style.display = 'flex';
+      allMeses.forEach(function(m, i) {
+        const btn = document.createElement('button');
+        btn.className = 'month-tab' + (i === 0 ? ' active' : '');
+        btn.textContent = fmtMes(m);
+        btn.dataset.mes = m;
+        btn.addEventListener('click', async function() {
+          tabsEl.querySelectorAll('.month-tab').forEach(function(b) { b.classList.remove('active'); });
+          this.classList.add('active');
+          await loadMes(this.dataset.mes);
+        });
+        tabsEl.appendChild(btn);
+      });
+
+      await loadMes(allMeses[0]);
     } catch(e) {
-      document.getElementById('loadingState').innerHTML=`<p style="color:var(--negative);">${e.message}</p>`;
+      document.getElementById('loadingState').innerHTML = `<p style="color:var(--negative);">${e.message}</p>`;
     }
   }
+
+  async function loadMes(mes) {
+    document.getElementById('loadingState').style.display = 'flex';
+    document.getElementById('content').style.display = 'none';
+    try {
+      const [productos, campanas] = await Promise.all([
+        sbFetch('productos', {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, order:'ventas_totales.desc'}),
+        sbFetch('campanas',  {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, order:'gasto.desc'}),
+      ]);
+      render(productos, campanas, mes);
+    } catch(e) {
+      document.getElementById('loadingState').innerHTML = `<p style="color:var(--negative);">${e.message}</p>`;
+    }
+  }
+
 
   function render(productos,campanas,mes) {
     document.getElementById('headerClientName').textContent=CONFIG.clienteNombre;
