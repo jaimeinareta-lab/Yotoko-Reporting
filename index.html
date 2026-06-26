@@ -337,6 +337,8 @@
   function makeChart(id,type,labels,datasets,opts={}) {
     const ctx=document.getElementById(id);
     if(!ctx) return;
+    const existing=Chart.getChart(id);
+    if(existing) existing.destroy();
     const isHoriz = opts.indexAxis==='y';
     return new Chart(ctx,{
       type,
@@ -547,7 +549,8 @@
     makeChart('chartRoasCarteras','bar',
       cartArr.map(([n])=>n),
       [{data:cartArr.map(([,d])=>d.inv>0?+(d.ven/d.inv).toFixed(2):0),
-        backgroundColor:cartArr.map(([,d])=>{const r=d.inv>0?d.ven/d.inv:0;return r>=3?'#16A34A':r>=2?'#1A56DB':'#DC2626';}),
+        backgroundColor:cartArr.map(([,d])=>{const r=d.inv>0?d.ven/d.inv:0;return r>=3?'rgba(22,163,74,0.82)':r>=2?'rgba(26,86,219,0.82)':'rgba(220,38,38,0.82)';}),
+        barPercentage:0.6,categoryPercentage:0.7,
         borderRadius:4,borderSkipped:false,maxBarThickness:36}],
       {yFmt:v=>`${v}x`}
     );
@@ -679,9 +682,7 @@
       });
     }
     function attachEditHandlers() {
-      document.querySelectorAll('#bodyProductos .titulo-cell, #chartProductos .titulo-cell').forEach(function(cell) {
-        cell.ondblclick = function(e) { e.preventDefault(); makeEditable(this); };
-      });
+      // mantenido por compatibilidad — la edición real va por event delegation (ver abajo)
     }
 
   // ── Tooltip JS (position:fixed, nunca clipado) ─────────────────────────────
@@ -716,6 +717,15 @@
       if (!e.target.closest('.hbar-row[data-tip]')) tip.style.display = 'none';
     });
   })();
+
+  // Event delegation para edición con doble clic — funciona aunque se re-rendericen los elementos
+  document.addEventListener('dblclick', function(e) {
+    var cell = e.target.closest('.titulo-cell');
+    if (!cell) return;
+    e.preventDefault();
+    makeEditable(cell);
+  });
+
 
   init();
 </script>
