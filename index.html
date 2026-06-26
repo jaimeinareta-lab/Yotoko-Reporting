@@ -115,6 +115,7 @@
     }
 
     .hbar-label { cursor: default; }
+    .hbar-label.titulo-cell { cursor: pointer; }
     .hbar-row[title]:hover::after {
       content: attr(title);
       position: absolute;
@@ -380,7 +381,7 @@
         const skuEsc  = (p.sku||'').replace(/"/g,'&quot;');
         const lblEsc = lbl.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         return `<div class="hbar-row" data-tip="${lblEsc}">
-          <div class="hbar-label titulo-cell" data-asin="${asinEsc}" data-sku="${skuEsc}" title="${lbl} (doble clic para editar)">${lbl}</div>
+          <div class="hbar-label titulo-cell" data-asin="${asinEsc}" data-sku="${skuEsc}" data-titulo="${lbl}" title="${lbl} (doble clic para editar)">${lbl}</div>
           <div class="hbar-bar-wrap">
             <div class="hbar-bar" style="width:${barPct}%;">
               <div class="hbar-seg" style="width:${seg1Pct}%;background:${val1Color};"></div>
@@ -578,7 +579,7 @@
       const asinEsc=(p.asin||'').replace(/"/g,'&quot;');
       const skuEsc=(p.sku||'').replace(/"/g,'&quot;');
       return `<tr><td style="color:var(--ink-light);font-size:12px;">${i+1}</td>
-        <td class="titulo-cell" data-asin="${asinEsc}" data-sku="${skuEsc}" title="${p.titulo} (doble clic para editar)">${p.titulo.substring(0,60)}</td>
+        <td class="titulo-cell" data-asin="${asinEsc}" data-sku="${skuEsc}" data-titulo="${p.titulo}" title="${p.titulo} (doble clic para editar)">${p.titulo.substring(0,60)}</td>
         <td class="td-num">${fmtEur(p.ventas_totales)}</td><td class="td-num">${fmt(p.unidades_vendidas)}</td>
         <td class="td-num"><span class="badge badge-neu">${fmtEur(p.ppc_gasto)}</span></td>
         <td class="td-num"><span class="badge ${pct>=10?'badge-pos':pct>=3?'badge-neu':'badge-neg'}">${fmt(pct,1)}%</span></td></tr>`;
@@ -651,8 +652,17 @@
       if (cell.querySelector('input')) return;
       const asin = cell.dataset.asin || '';
       const sku  = cell.dataset.sku  || '';
-      const current = cell.textContent.trim();
+      // Usar data-titulo (valor completo) si está disponible, si no el textContent
+      const current = cell.dataset.titulo || cell.textContent.trim();
+      const isHbarLabel = cell.classList.contains('hbar-label');
       cell.classList.add('titulo-cell-editing');
+      // Si es hbar-label: overflow visible para que el input no quede cortado
+      if (isHbarLabel) {
+        cell._origOverflow = cell.style.overflow;
+        cell.style.overflow = 'visible';
+        cell.style.width = 'auto';
+        cell.style.minWidth = '180px';
+      }
       const input = document.createElement('input');
       input.type = 'text';
       input.value = current;
@@ -664,11 +674,23 @@
         const val = input.value.trim() || current;
         setTituloOverride(asin, sku, val);
         cell.classList.remove('titulo-cell-editing');
+        // Restaurar estilos hbar-label
+        if (isHbarLabel) {
+          cell.style.overflow = cell._origOverflow || '';
+          cell.style.width = '';
+          cell.style.minWidth = '';
+        }
+        // Actualizar data-titulo con el nuevo valor completo
+        cell.dataset.titulo = val;
         cell.textContent = val.substring(0, 60);
         cell.title = val + ' (doble clic para editar)';
         cell.setAttribute('title', val + ' (doble clic para editar)');
-        // Update row title tooltip too
-        if (cell.closest('.hbar-row')) cell.closest('.hbar-row').title = val;
+        // Actualizar data-tip del hbar-row (tooltip JS)
+        const row = cell.closest('.hbar-row');
+        if (row) {
+          row.dataset.tip = val;
+          if (row.title) row.title = val;
+        }
         cell.ondblclick = function(e) { e.preventDefault(); makeEditable(this); };
       }
       input.addEventListener('blur', save);
@@ -676,6 +698,11 @@
         if (e.key === 'Enter') input.blur();
         if (e.key === 'Escape') {
           cell.classList.remove('titulo-cell-editing');
+          if (isHbarLabel) {
+            cell.style.overflow = cell._origOverflow || '';
+            cell.style.width = '';
+            cell.style.minWidth = '';
+          }
           cell.textContent = current.substring(0, 60);
           attachEditHandlers();
         }
