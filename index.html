@@ -376,7 +376,8 @@
         const lbl = p[labelKey] || '—';
         const asinEsc = (p.asin||'').replace(/"/g,'&quot;');
         const skuEsc  = (p.sku||'').replace(/"/g,'&quot;');
-        return `<div class="hbar-row" title="${lbl}">
+        const lblEsc = lbl.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return `<div class="hbar-row" data-tip="${lblEsc}">
           <div class="hbar-label titulo-cell" data-asin="${asinEsc}" data-sku="${skuEsc}" title="${lbl} (doble clic para editar)">${lbl}</div>
           <div class="hbar-bar-wrap">
             <div class="hbar-bar" style="width:${barPct}%;">
@@ -682,6 +683,39 @@
         cell.ondblclick = function(e) { e.preventDefault(); makeEditable(this); };
       });
     }
+
+  // ── Tooltip JS (position:fixed, nunca clipado) ─────────────────────────────
+  (function() {
+    var tip = document.createElement('div');
+    tip.id = 'gs-tooltip';
+    tip.style.cssText = [
+      'position:fixed','z-index:99999','pointer-events:none',
+      'background:rgba(13,13,13,0.92)','color:#fff','padding:6px 11px',
+      'border-radius:5px','font-size:12px','line-height:1.45',
+      'max-width:320px','white-space:normal','word-break:break-word',
+      'display:none','box-shadow:0 2px 8px rgba(0,0,0,0.25)'
+    ].join(';');
+    document.body.appendChild(tip);
+
+    document.addEventListener('mouseover', function(e) {
+      var row = e.target.closest('.hbar-row[data-tip]');
+      if (!row) { tip.style.display = 'none'; return; }
+      tip.textContent = row.dataset.tip;
+      tip.style.display = 'block';
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (tip.style.display === 'none') return;
+      var x = e.clientX + 14;
+      var y = e.clientY + 14;
+      if (x + 330 > window.innerWidth) x = e.clientX - 330;
+      if (y + 60  > window.innerHeight) y = e.clientY - 44;
+      tip.style.left = x + 'px';
+      tip.style.top  = y + 'px';
+    });
+    document.addEventListener('mouseout', function(e) {
+      if (!e.target.closest('.hbar-row[data-tip]')) tip.style.display = 'none';
+    });
+  })();
 
   init();
 </script>
