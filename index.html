@@ -189,8 +189,7 @@
     .camp-td-inner.calc { text-align: right; font-weight: 600; color: var(--ink-mid); font-variant-numeric: tabular-nums; }
     .camp-td-inner.editable { cursor: text; }
     .camp-td-inner.editable:hover { background: rgba(26,86,219,0.06); border-radius: 4px; }
-    .camp-td-inner.editable::after { content: '✎'; font-size: 9px; color: var(--accent2); opacity: 0; margin-left: 6px; transition: opacity 0.15s; vertical-align: middle; }
-    .camp-table tr:hover .camp-td-inner.editable::after { opacity: 0.6; }
+    .camp-td-inner.editable::after { content: none; }
     .camp-td-inner input { width: 100%; font-size: 13px; font-family: inherit; border: none; outline: none; background: transparent; color: var(--ink); padding: 0; font-variant-numeric: tabular-nums; }
     .camp-td-inner.editing { background: rgba(26,86,219,0.07); border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--accent2); }
     .camp-td-del { width: 28px; padding: 0 !important; }
@@ -347,7 +346,6 @@
       <div class="section-header">
         <div class="section-title">Top campañas por inversión</div>
         <div class="section-line"></div>
-        <button class="btn-edit-camp" id="btnEditCamp" onclick="abrirEditorCampanas()" style="display:none;">&#9998; Editar</button>
       </div>
       <div class="chart-card">
         <div id="chartCampanas"></div>
@@ -836,7 +834,7 @@
       table.className = 'camp-table';
       table.innerHTML =
         '<thead><tr>' +
-          '<th>Campaña <span class="camp-manual-badge">Manual · doble clic para editar</span></th>' +
+          '<th>Campaña</th>' +
           '<th class="th-num">Inversión</th>' +
           '<th class="th-num">Ventas PPC</th>' +
           '<th class="th-num">ROAS</th>' +
@@ -870,19 +868,15 @@
 
     function renderCampanas(campanas, mes, modoManual) {
       _editorMes = mes;
-      var btnEdit = document.getElementById('btnEditCamp');
       var el = document.getElementById('chartCampanas');
       if (!el) return;
 
       if (modoManual) {
-        // Sin datos de API: mostrar tabla editable directamente
-        if (btnEdit) btnEdit.style.display = 'none';
         renderTablaCampanas(el, campanas, mes, !campanas.length);
         return;
       }
 
-      // Datos de Supabase: hbar normal + botón "✎ Editar" discreto
-      if (btnEdit) btnEdit.style.display = 'inline-block';
+      // Datos de Supabase: hbar normal
       var top10 = campanas.slice(0, 10);
       var maxInv = Math.max.apply(null, top10.map(function(c){ return c.gasto||0; }).concat([1]));
       var maxVen = Math.max.apply(null, top10.map(function(c){ return c.ventas||0; }).concat([1]));
