@@ -721,6 +721,11 @@
       try { localStorage.setItem(_campKey(mes), JSON.stringify(rows)); } catch(e) {}
     }
 
+    // Overrides de nombre de campaña — persisten aunque Supabase actualice números
+    function _campNombreOvKey(mes, orig) { return 'gs_cn_' + CONFIG.clienteId + '_' + mes + '_' + orig; }
+    function getCampNombreOv(mes, orig) { try { return localStorage.getItem(_campNombreOvKey(mes, orig)); } catch(e) { return null; } }
+    function setCampNombreOv(mes, orig, nombre) { try { localStorage.setItem(_campNombreOvKey(mes, orig), nombre); } catch(e) {} }
+
     var _editorMes = null;
 
     function abrirEditorCampanas() {
@@ -760,13 +765,18 @@
         inner.dataset.val = nuevo;
         inner.innerHTML = tipo === 'nombre' ? (nuevo || '<span style="color:var(--ink-light);font-style:italic;">Sin nombre</span>') : fmtEur(nuevo);
         reattachDblClick(td);
+        // Si editamos el nombre, guardar override persistente (sobrevive a actualizaciones de Supabase)
+        if (tipo === 'nombre') {
+          var orig = td.dataset.originalNombre !== undefined ? td.dataset.originalNombre : valorActual;
+          setCampNombreOv(_editorMes, orig, nuevo);
+        }
         // Recalcular ROAS/ACoS de esta fila
         var inv = parseFloat(tr.querySelector('[data-tipo="gasto"] .camp-td-inner').dataset.val) || 0;
         var ven = parseFloat(tr.querySelector('[data-tipo="ventas"] .camp-td-inner').dataset.val) || 0;
         var c = calcRoasAcos(inv, ven);
         tr.querySelector('.td-roas').textContent = c.roas;
         tr.querySelector('.td-acos').textContent = c.acos;
-        // Auto-guardar
+        // Auto-guardar fila completa (para clientes sin datos en Supabase)
         persistirCampanas(tr.closest('table'));
       }
 
@@ -801,10 +811,12 @@
       var inv = parseFloat(r.gasto) || 0;
       var ven = parseFloat(r.ventas) || 0;
       var c = calcRoasAcos(inv, ven);
-      var nombre = r.campana_nombre || '';
+      var originalNombre = r.campana_nombre || '';
+      // El nombre mostrado respeta el override del usuario; los números siempre vienen del origen (Supabase o manual)
+      var nombre = getCampNombreOv(mes, originalNombre) || originalNombre;
       var tr = document.createElement('tr');
       tr.innerHTML =
-        '<td data-tipo="nombre"><div class="camp-td-inner editable" data-val="' + nombre.replace(/"/g,'&quot;') + '">' + (nombre || '') + '</div></td>' +
+        '<td data-tipo="nombre" data-original-nombre="' + originalNombre.replace(/"/g,'&quot;') + '"><div class="camp-td-inner editable" data-val="' + nombre.replace(/"/g,'&quot;') + '">' + (nombre || '') + '</div></td>' +
         '<td data-tipo="gasto"><div class="camp-td-inner editable num" data-val="' + inv + '">' + fmtEur(inv) + '</div></td>' +
         '<td data-tipo="ventas"><div class="camp-td-inner editable num" data-val="' + ven + '">' + fmtEur(ven) + '</div></td>' +
         '<td><div class="camp-td-inner calc td-roas">' + c.roas + '</div></td>' +
