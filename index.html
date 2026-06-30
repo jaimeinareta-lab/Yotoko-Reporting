@@ -555,9 +555,8 @@
       const marketplaces = [...new Set(mktRows.map(function(r) { return r.marketplace; }).filter(function(m) { return m && m !== ''; }))].sort();
       renderMarketplaceTabs(marketplaces, currentMarketplace);
 
-      // Los datos manuales de localStorage siempre tienen prioridad sobre Supabase
-      var manual = loadManualCampanas(mes);
-      var campañasFinales = manual.length ? manual : campanas;
+      // Supabase tiene prioridad; localStorage es fallback cuando no hay datos en API
+      var campañasFinales = campanas.length ? campanas : loadManualCampanas(mes);
 
       render(productos, campañasFinales, mes, true);
     } catch(e) {
