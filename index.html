@@ -170,6 +170,60 @@
       color: var(--accent2);
       font-weight: 600;
     }
+
+    /* TABLA DE CAMPAÑAS EDITABLE */
+    .camp-table { width: 100%; border-collapse: collapse; }
+    .camp-table th { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-light); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    .camp-table th.th-num { text-align: right; }
+    .camp-table td { padding: 0; border-bottom: 1px solid var(--border); vertical-align: middle; position: relative; }
+    .camp-table tr:last-child td { border-bottom: none; }
+    .camp-table tr:hover td { background: var(--surface2); }
+    .camp-td-inner { padding: 10px 12px; font-size: 13px; color: var(--ink); display: block; min-height: 38px; line-height: 1.4; }
+    .camp-td-inner.num { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .camp-td-inner.calc { text-align: right; font-weight: 600; color: var(--ink-mid); font-variant-numeric: tabular-nums; }
+    .camp-td-inner.editable { cursor: text; }
+    .camp-td-inner.editable:hover { background: rgba(26,86,219,0.06); border-radius: 4px; }
+    .camp-td-inner.editable::after { content: '✎'; font-size: 9px; color: var(--accent2); opacity: 0; margin-left: 6px; transition: opacity 0.15s; vertical-align: middle; }
+    .camp-table tr:hover .camp-td-inner.editable::after { opacity: 0.6; }
+    .camp-td-inner input { width: 100%; font-size: 13px; font-family: inherit; border: none; outline: none; background: transparent; color: var(--ink); padding: 0; font-variant-numeric: tabular-nums; }
+    .camp-td-inner.editing { background: rgba(26,86,219,0.07); border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--accent2); }
+    .camp-td-del { width: 28px; padding: 0 !important; }
+    .btn-del-row { display: none; background: none; border: none; cursor: pointer; color: var(--ink-light); font-size: 14px; padding: 10px 6px; width: 100%; transition: color 0.1s; }
+    .camp-table tr:hover .btn-del-row { display: block; }
+    .btn-del-row:hover { color: var(--negative); }
+    .camp-add-row { display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 10px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: var(--ink-light); background: none; border: 1px dashed var(--border); border-radius: 5px; cursor: pointer; font-family: inherit; transition: color 0.12s, border-color 0.12s; }
+    .camp-add-row:hover { color: var(--accent2); border-color: var(--accent2); }
+    .camp-manual-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent2); background: rgba(26,86,219,0.1); padding: 2px 7px; border-radius: 4px; }
+    .btn-edit-camp { font-size: 11px; font-weight: 600; color: var(--ink-light); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 3px 10px; cursor: pointer; font-family: inherit; transition: color 0.15s, border-color 0.15s; }
+    .btn-edit-camp:hover { color: var(--accent2); border-color: var(--accent2); }
+
+    .marketplace-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 8px 24px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .marketplace-tab {
+      padding: 4px 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--ink-mid);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      font-family: inherit;
+    }
+    .marketplace-tab:hover { background: var(--border); color: var(--ink); }
+    .marketplace-tab.active {
+      background: var(--accent2);
+      border-color: var(--accent2);
+      color: #fff;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -184,6 +238,7 @@
 </header>
 
 <div id="monthTabs" class="month-tabs" style="display:none;"></div>
+<div id="marketplaceTabs" class="marketplace-tabs" style="display:none;"></div>
 
 <main class="container">
   <div class="loading-state" id="loadingState">
@@ -283,7 +338,11 @@
 
 
     <div class="section">
-      <div class="section-header"><div class="section-title">Top campañas por inversión</div><div class="section-line"></div></div>
+      <div class="section-header">
+        <div class="section-title">Top campañas por inversión</div>
+        <div class="section-line"></div>
+        <button class="btn-edit-camp" id="btnEditCamp" onclick="abrirEditorCampanas()" style="display:none;">&#9998; Editar</button>
+      </div>
       <div class="chart-card">
         <div id="chartCampanas"></div>
       </div>
@@ -303,6 +362,9 @@
     supabaseUrl: 'https://wxqqmflqwnohsxpbonpw.supabase.co',
     supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4cXFtZmxxd25vaHN4cGJvbnB3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTM1ODgsImV4cCI6MjA5NzQ2OTU4OH0.WC4EXYyWPBllWGSXUKGtL7nBMUg9Qi-zHqYDJbfmx6U',
   };
+
+  let currentMes = null;
+  let currentMarketplace = null;
 
   const fmt = (n,d=0) => new Intl.NumberFormat('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n||0);
   const fmtEur = n => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
@@ -426,35 +488,86 @@
         btn.addEventListener('click', async function() {
           tabsEl.querySelectorAll('.month-tab').forEach(function(b) { b.classList.remove('active'); });
           this.classList.add('active');
-          await loadMes(this.dataset.mes);
+          currentMarketplace = null;
+          await loadMes(this.dataset.mes, null);
         });
         tabsEl.appendChild(btn);
       });
 
-      await loadMes(allMeses[0]);
+      await loadMes(allMeses[0], null);
     } catch(e) {
       document.getElementById('loadingState').innerHTML = `<p style="color:var(--negative);">${e.message}</p>`;
     }
   }
 
-  async function loadMes(mes) {
+  function renderMarketplaceTabs(marketplaces, activeMkt) {
+    const tabsEl = document.getElementById('marketplaceTabs');
+    if (marketplaces.length <= 1) {
+      tabsEl.style.display = 'none';
+      tabsEl.innerHTML = '';
+      return;
+    }
+    tabsEl.style.display = 'flex';
+    tabsEl.innerHTML = '';
+
+    const allBtn = document.createElement('button');
+    allBtn.className = 'marketplace-tab' + (!activeMkt ? ' active' : '');
+    allBtn.textContent = 'Todos';
+    allBtn.addEventListener('click', async function() {
+      tabsEl.querySelectorAll('.marketplace-tab').forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      await loadMes(currentMes, null);
+    });
+    tabsEl.appendChild(allBtn);
+
+    marketplaces.forEach(function(mkt) {
+      const btn = document.createElement('button');
+      btn.className = 'marketplace-tab' + (activeMkt === mkt ? ' active' : '');
+      btn.textContent = mkt;
+      btn.addEventListener('click', async function() {
+        tabsEl.querySelectorAll('.marketplace-tab').forEach(function(b) { b.classList.remove('active'); });
+        this.classList.add('active');
+        await loadMes(currentMes, mkt);
+      });
+      tabsEl.appendChild(btn);
+    });
+  }
+
+  async function loadMes(mes, marketplace) {
+    currentMes = mes;
+    currentMarketplace = marketplace || null;
     document.getElementById('loadingState').style.display = 'flex';
     document.getElementById('content').style.display = 'none';
     try {
-      const [productos, campanas] = await Promise.all([
-        sbFetch('productos', {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, order:'ventas_totales.desc'}),
+      const prodParams = {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, order:'ventas_totales.desc'};
+      if (currentMarketplace) prodParams.marketplace = `eq.${currentMarketplace}`;
+
+      const [productos, campanas, mktRows] = await Promise.all([
+        sbFetch('productos', prodParams),
         sbFetch('campanas',  {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, order:'gasto.desc'}),
+        sbFetch('productos', {select:'marketplace', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`}),
       ]);
-      render(productos, campanas, mes);
+
+      const marketplaces = [...new Set(mktRows.map(function(r) { return r.marketplace; }).filter(function(m) { return m && m !== ''; }))].sort();
+      renderMarketplaceTabs(marketplaces, currentMarketplace);
+
+      // Si Supabase no tiene campañas, cargar datos manuales de localStorage
+      var campañasFinales = campanas;
+      if (!campanas.length) {
+        var manual = loadManualCampanas(mes);
+        if (manual.length) campañasFinales = manual;
+      }
+
+      render(productos, campañasFinales, mes, campanas.length === 0);
     } catch(e) {
       document.getElementById('loadingState').innerHTML = `<p style="color:var(--negative);">${e.message}</p>`;
     }
   }
 
 
-  function render(productos,campanas,mes) {
+  function render(productos,campanas,mes,modoManual) {
     document.getElementById('headerClientName').textContent=CONFIG.clienteNombre;
-    document.getElementById('headerPeriod').textContent=fmtMes(mes);
+    document.getElementById('headerPeriod').textContent=fmtMes(mes) + (currentMarketplace ? ' · ' + currentMarketplace : '');
     document.title=`${CONFIG.clienteNombre} — Grow Studio`;
 
     // Agrupar por similitud de título (primeras 8 palabras) para consolidar variantes
@@ -586,7 +699,7 @@
     }).join(''):'<tr><td colspan="6" class="no-data">Sin datos de productos.</td></tr>';
     attachEditHandlers();
 
-    renderCampanas(campanas);
+    renderCampanas(campanas, mes, modoManual);
 
     document.getElementById('loadingState').style.display='none';
     document.getElementById('content').style.display='block';
@@ -598,24 +711,185 @@
       return (nombre||'—').replace(/\s*-\s*\[\d{2}\/\d{2}\]\s*$/,'').trim();
     }
 
-    function renderCampanas(campanas) {
-      const el = document.getElementById('chartCampanas');
+    // ── Datos manuales de campañas (localStorage) ─────────────────────
+    function _campKey(mes) { return 'gs_campanas_manual_' + CONFIG.clienteId + '_' + mes; }
+    function loadManualCampanas(mes) {
+      try { return JSON.parse(localStorage.getItem(_campKey(mes)) || '[]'); } catch(e) { return []; }
+    }
+    function saveManualCampanas(mes, rows) {
+      try { localStorage.setItem(_campKey(mes), JSON.stringify(rows)); } catch(e) {}
+    }
+
+    var _editorMes = null;
+
+    function abrirEditorCampanas() {
+      var rows = loadManualCampanas(_editorMes);
+      renderTablaCampanas(document.getElementById('chartCampanas'), rows, _editorMes, true);
+    }
+
+    // Recalcula ROAS y ACoS de una fila dado inversión y ventas
+    function calcRoasAcos(inv, ven) {
+      return {
+        roas: (inv > 0) ? fmt(ven / inv, 2) + 'x' : '—',
+        acos: (ven > 0) ? fmt((inv / ven) * 100, 1) + '%' : '—'
+      };
+    }
+
+    // Activa edición inline en una celda
+    function activarCeldaEditable(td) {
+      var inner = td.querySelector('.camp-td-inner');
+      if (!inner || inner.classList.contains('editing')) return;
+      var tr = td.closest('tr');
+      var tipo = td.dataset.tipo; // 'nombre' | 'gasto' | 'ventas'
+      var valorActual = inner.dataset.val !== undefined ? inner.dataset.val : inner.textContent.trim();
+      inner.classList.add('editing');
+      inner.innerHTML = '';
+      var input = document.createElement('input');
+      input.type = tipo === 'nombre' ? 'text' : 'number';
+      if (tipo !== 'nombre') { input.min = '0'; input.step = '0.01'; }
+      input.value = tipo === 'nombre' ? valorActual : (parseFloat(valorActual) || '');
+      input.placeholder = tipo === 'nombre' ? 'Nombre campaña' : '0.00';
+      inner.appendChild(input);
+      input.focus();
+      if (tipo !== 'nombre') input.select();
+
+      function guardar() {
+        var nuevo = tipo === 'nombre' ? input.value.trim() : (parseFloat(input.value) || 0);
+        inner.classList.remove('editing');
+        inner.dataset.val = nuevo;
+        inner.innerHTML = tipo === 'nombre' ? (nuevo || '<span style="color:var(--ink-light);font-style:italic;">Sin nombre</span>') : fmtEur(nuevo);
+        reattachDblClick(td);
+        // Recalcular ROAS/ACoS de esta fila
+        var inv = parseFloat(tr.querySelector('[data-tipo="gasto"] .camp-td-inner').dataset.val) || 0;
+        var ven = parseFloat(tr.querySelector('[data-tipo="ventas"] .camp-td-inner').dataset.val) || 0;
+        var c = calcRoasAcos(inv, ven);
+        tr.querySelector('.td-roas').textContent = c.roas;
+        tr.querySelector('.td-acos').textContent = c.acos;
+        // Auto-guardar
+        persistirCampanas(tr.closest('table'));
+      }
+
+      input.addEventListener('blur', guardar);
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') {
+          inner.classList.remove('editing');
+          inner.dataset.val = valorActual;
+          inner.innerHTML = tipo === 'nombre' ? (valorActual || '') : fmtEur(parseFloat(valorActual) || 0);
+          reattachDblClick(td);
+        }
+      });
+    }
+
+    function reattachDblClick(td) {
+      td.ondblclick = function(e) { e.preventDefault(); activarCeldaEditable(this); };
+    }
+
+    function persistirCampanas(table) {
+      var rows = [];
+      table.querySelectorAll('tbody tr').forEach(function(tr) {
+        var nombre = (tr.querySelector('[data-tipo="nombre"] .camp-td-inner').dataset.val || '').trim();
+        var gasto  = parseFloat(tr.querySelector('[data-tipo="gasto"]  .camp-td-inner').dataset.val) || 0;
+        var ventas = parseFloat(tr.querySelector('[data-tipo="ventas"] .camp-td-inner').dataset.val) || 0;
+        if (nombre || gasto || ventas) rows.push({ campana_nombre: nombre, gasto: gasto, ventas: ventas });
+      });
+      saveManualCampanas(_editorMes, rows);
+    }
+
+    function crearFilaCamp(r, mes) {
+      var inv = parseFloat(r.gasto) || 0;
+      var ven = parseFloat(r.ventas) || 0;
+      var c = calcRoasAcos(inv, ven);
+      var nombre = r.campana_nombre || '';
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td data-tipo="nombre"><div class="camp-td-inner editable" data-val="' + nombre.replace(/"/g,'&quot;') + '">' + (nombre || '') + '</div></td>' +
+        '<td data-tipo="gasto"><div class="camp-td-inner editable num" data-val="' + inv + '">' + fmtEur(inv) + '</div></td>' +
+        '<td data-tipo="ventas"><div class="camp-td-inner editable num" data-val="' + ven + '">' + fmtEur(ven) + '</div></td>' +
+        '<td><div class="camp-td-inner calc td-roas">' + c.roas + '</div></td>' +
+        '<td><div class="camp-td-inner calc td-acos">' + c.acos + '</div></td>' +
+        '<td class="camp-td-del"><button class="btn-del-row" title="Eliminar">&#10005;</button></td>';
+
+      tr.querySelectorAll('[data-tipo]').forEach(function(td) {
+        td.ondblclick = function(e) { e.preventDefault(); activarCeldaEditable(this); };
+      });
+      tr.querySelector('.btn-del-row').onclick = function() {
+        tr.remove();
+        persistirCampanas(tr.closest('table') || document.querySelector('.camp-table'));
+        // Recargar para refrescar carteras
+        loadMes(_editorMes, currentMarketplace);
+      };
+      return tr;
+    }
+
+    function renderTablaCampanas(el, rows, mes, focusPrimero) {
+      if (!rows.length) rows = [{ campana_nombre: '', gasto: 0, ventas: 0 }];
+
+      var table = document.createElement('table');
+      table.className = 'camp-table';
+      table.innerHTML =
+        '<thead><tr>' +
+          '<th>Campaña <span class="camp-manual-badge">Manual · doble clic para editar</span></th>' +
+          '<th class="th-num">Inversión</th>' +
+          '<th class="th-num">Ventas PPC</th>' +
+          '<th class="th-num">ROAS</th>' +
+          '<th class="th-num">ACoS</th>' +
+          '<th></th>' +
+        '</tr></thead>' +
+        '<tbody></tbody>';
+
+      var tbody = table.querySelector('tbody');
+      rows.forEach(function(r) { tbody.appendChild(crearFilaCamp(r, mes)); });
+
+      var addBtn = document.createElement('button');
+      addBtn.className = 'camp-add-row';
+      addBtn.textContent = '+ Añadir campaña';
+      addBtn.onclick = function() {
+        var tr = crearFilaCamp({ campana_nombre: '', gasto: 0, ventas: 0 }, mes);
+        tbody.appendChild(tr);
+        tr.querySelector('[data-tipo="nombre"] .camp-td-inner').ondblclick.call(tr.querySelector('[data-tipo="nombre"]'));
+        activarCeldaEditable(tr.querySelector('[data-tipo="nombre"]'));
+      };
+
+      el.innerHTML = '';
+      el.appendChild(table);
+      el.appendChild(addBtn);
+
+      if (focusPrimero) {
+        var primera = tbody.querySelector('[data-tipo="nombre"]');
+        if (primera) activarCeldaEditable(primera);
+      }
+    }
+
+    function renderCampanas(campanas, mes, modoManual) {
+      _editorMes = mes;
+      var btnEdit = document.getElementById('btnEditCamp');
+      var el = document.getElementById('chartCampanas');
       if (!el) return;
-      const top10 = campanas.slice(0, 10);
-      if (!top10.length) { el.innerHTML='<p class="no-data">Sin datos de campañas.</p>'; return; }
-      const maxInv = Math.max(...top10.map(c => c.gasto||0), 1);
-      const maxVen = Math.max(...top10.map(c => c.ventas||0), 1);
+
+      if (modoManual) {
+        // Sin datos de API: mostrar tabla editable directamente
+        if (btnEdit) btnEdit.style.display = 'none';
+        renderTablaCampanas(el, campanas, mes, !campanas.length);
+        return;
+      }
+
+      // Datos de Supabase: hbar normal + botón "✎ Editar" discreto
+      if (btnEdit) btnEdit.style.display = 'inline-block';
+      var top10 = campanas.slice(0, 10);
+      var maxInv = Math.max.apply(null, top10.map(function(c){ return c.gasto||0; }).concat([1]));
+      var maxVen = Math.max.apply(null, top10.map(function(c){ return c.ventas||0; }).concat([1]));
       el.innerHTML =
         '<div class="hbar-legend">' +
           '<div class="hbar-legend-item"><div class="hbar-legend-dot" style="background:#1A56DB;"></div>Inversión</div>' +
           '<div class="hbar-legend-item"><div class="hbar-legend-dot" style="background:#16A34A;"></div>Ventas PPC</div>' +
         '</div>' +
         '<div class="hbar-wrap" style="margin-top:12px;">' +
-        top10.map(c => {
-          const nombre = stripFecha(c.campana_nombre);
-          const invPct = Math.max(Math.round(((c.gasto||0)/maxInv)*100), 1);
-          const venPct = Math.max(Math.round(((c.ventas||0)/maxVen)*100), 1);
-          const roas = c.gasto > 0 ? fmt(c.ventas/c.gasto,2)+'x' : '—';
+        top10.map(function(c) {
+          var nombre = stripFecha(c.campana_nombre);
+          var invPct = Math.max(Math.round(((c.gasto||0)/maxInv)*100), 1);
+          var venPct = Math.max(Math.round(((c.ventas||0)/maxVen)*100), 1);
+          var roas = c.gasto > 0 ? fmt(c.ventas/c.gasto,2)+'x' : '—';
           return '<div class="hbar-row">' +
             '<div class="hbar-label" title="'+nombre+'">'+nombre+'</div>' +
             '<div style="flex:1;display:flex;flex-direction:column;gap:3px;">' +
