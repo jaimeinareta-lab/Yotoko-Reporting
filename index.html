@@ -114,6 +114,12 @@
       .hbar-label { width: 120px; }
     }
 
+    /* EDICIÓN INLINE DE CAMPOS NUMÉRICOS */
+    [data-gs-num] { cursor: text; border-radius: 3px; transition: outline 0.1s; }
+    [data-gs-num]:hover { outline: 1px dashed rgba(26,86,219,0.35); }
+    [data-gs-num].gs-editing { outline: 1.5px solid var(--accent2); background: rgba(26,86,219,0.06); padding: 1px 3px; }
+    [data-gs-num] input { border: none; outline: none; background: transparent; font: inherit; color: inherit; width: 100%; text-align: inherit; padding: 0; letter-spacing: inherit; font-variant-numeric: tabular-nums; min-width: 40px; }
+
     .hbar-label { cursor: default; }
     .hbar-label.titulo-cell { cursor: pointer; }
     .hbar-row[title]:hover::after {
@@ -703,6 +709,7 @@
 
     document.getElementById('loadingState').style.display='none';
     document.getElementById('content').style.display='block';
+    attachNumericEdits(mes);
   }
 
 
@@ -1019,8 +1026,79 @@
     });
   })();
 
+  // ── Edición inline universal de campos numéricos ──────────────────
+  function _gsOvKey(mes, field) { return 'gs_num_' + CONFIG.clienteId + '_' + mes + '_' + field; }
+  function gsGetOv(mes, field) { try { return localStorage.getItem(_gsOvKey(mes, field)); } catch(e) { return null; } }
+  function gsSetOv(mes, field, val) { try { localStorage.setItem(_gsOvKey(mes, field), val); } catch(e) {} }
+
+  function gsNumEdit(el) {
+    if (el.querySelector('input')) return;
+    var mes   = el.dataset.gsMes;
+    var field = el.dataset.gsNum;
+    var prev  = el.textContent.trim();
+    el.classList.add('gs-editing');
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.value = prev;
+    el.textContent = '';
+    el.appendChild(inp);
+    inp.focus(); inp.select();
+    function save() {
+      var val = inp.value.trim() || prev;
+      el.classList.remove('gs-editing');
+      el.textContent = val;
+      if (val !== prev) gsSetOv(mes, field, val);
+    }
+    inp.addEventListener('blur', save);
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+      if (e.key === 'Escape') { el.classList.remove('gs-editing'); el.textContent = prev; }
+    });
+  }
+
+  function attachNumericEdits(mes) {
+    // KPI values
+    [['kpiVentas','kpi_v'],['kpiUnidades','kpi_u'],['kpiNetProfit','kpi_a'],['kpiTacos','kpi_t']].forEach(function(x) {
+      var el = document.getElementById(x[0]);
+      if (!el) return;
+      var ov = gsGetOv(mes, x[1]);
+      if (ov) el.textContent = ov;
+      el.dataset.gsNum = x[1]; el.dataset.gsMes = mes;
+    });
+    // Donut
+    [['donutOrg','dn_op'],['donutOrgEur','dn_oe'],['donutPpc','dn_pp'],['donutPpcEur','dn_pe']].forEach(function(x) {
+      var el = document.getElementById(x[0]);
+      if (!el) return;
+      var ov = gsGetOv(mes, x[1]);
+      if (ov) el.textContent = ov;
+      el.dataset.gsNum = x[1]; el.dataset.gsMes = mes;
+    });
+    // Carteras
+    document.querySelectorAll('#bodyCarteras tr').forEach(function(tr, i) {
+      tr.querySelectorAll('td.td-num').forEach(function(td, j) {
+        var target = td.querySelector('.badge') || td;
+        var field  = 'ct_' + i + '_' + j;
+        var ov = gsGetOv(mes, field);
+        if (ov) target.textContent = ov;
+        target.dataset.gsNum = field; target.dataset.gsMes = mes;
+      });
+    });
+    // Productos
+    document.querySelectorAll('#bodyProductos tr').forEach(function(tr, i) {
+      tr.querySelectorAll('td.td-num').forEach(function(td, j) {
+        var target = td.querySelector('.badge') || td;
+        var field  = 'pr_' + i + '_' + j;
+        var ov = gsGetOv(mes, field);
+        if (ov) target.textContent = ov;
+        target.dataset.gsNum = field; target.dataset.gsMes = mes;
+      });
+    });
+  }
+
   // Event delegation para edición con doble clic — funciona aunque se re-rendericen los elementos
   document.addEventListener('dblclick', function(e) {
+    var num = e.target.closest('[data-gs-num]');
+    if (num) { e.preventDefault(); e.stopPropagation(); gsNumEdit(num); return; }
     var cell = e.target.closest('.titulo-cell');
     if (!cell) return;
     e.preventDefault();
