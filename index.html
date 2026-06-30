@@ -555,14 +555,11 @@
       const marketplaces = [...new Set(mktRows.map(function(r) { return r.marketplace; }).filter(function(m) { return m && m !== ''; }))].sort();
       renderMarketplaceTabs(marketplaces, currentMarketplace);
 
-      // Si Supabase no tiene campañas, cargar datos manuales de localStorage
-      var campañasFinales = campanas;
-      if (!campanas.length) {
-        var manual = loadManualCampanas(mes);
-        if (manual.length) campañasFinales = manual;
-      }
+      // Los datos manuales de localStorage siempre tienen prioridad sobre Supabase
+      var manual = loadManualCampanas(mes);
+      var campañasFinales = manual.length ? manual : campanas;
 
-      render(productos, campañasFinales, mes, campanas.length === 0);
+      render(productos, campañasFinales, mes, true);
     } catch(e) {
       document.getElementById('loadingState').innerHTML = `<p style="color:var(--negative);">${e.message}</p>`;
     }
@@ -703,7 +700,7 @@
     }).join(''):'<tr><td colspan="6" class="no-data">Sin datos de productos.</td></tr>';
     attachEditHandlers();
 
-    renderCampanas(campanas, mes, modoManual);
+    renderCampanas(campanas, mes);
 
     document.getElementById('loadingState').style.display='none';
     document.getElementById('content').style.display='block';
@@ -852,7 +849,6 @@
       addBtn.onclick = function() {
         var tr = crearFilaCamp({ campana_nombre: '', gasto: 0, ventas: 0 }, mes);
         tbody.appendChild(tr);
-        tr.querySelector('[data-tipo="nombre"] .camp-td-inner').ondblclick.call(tr.querySelector('[data-tipo="nombre"]'));
         activarCeldaEditable(tr.querySelector('[data-tipo="nombre"]'));
       };
 
@@ -866,50 +862,11 @@
       }
     }
 
-    function renderCampanas(campanas, mes, modoManual) {
+    function renderCampanas(campanas, mes) {
       _editorMes = mes;
       var el = document.getElementById('chartCampanas');
       if (!el) return;
-
-      if (modoManual) {
-        renderTablaCampanas(el, campanas, mes, !campanas.length);
-        return;
-      }
-
-      // Datos de Supabase: hbar normal
-      var top10 = campanas.slice(0, 10);
-      var maxInv = Math.max.apply(null, top10.map(function(c){ return c.gasto||0; }).concat([1]));
-      var maxVen = Math.max.apply(null, top10.map(function(c){ return c.ventas||0; }).concat([1]));
-      el.innerHTML =
-        '<div class="hbar-legend">' +
-          '<div class="hbar-legend-item"><div class="hbar-legend-dot" style="background:#1A56DB;"></div>Inversión</div>' +
-          '<div class="hbar-legend-item"><div class="hbar-legend-dot" style="background:#16A34A;"></div>Ventas PPC</div>' +
-        '</div>' +
-        '<div class="hbar-wrap" style="margin-top:12px;">' +
-        top10.map(function(c) {
-          var nombre = stripFecha(c.campana_nombre);
-          var invPct = Math.max(Math.round(((c.gasto||0)/maxInv)*100), 1);
-          var venPct = Math.max(Math.round(((c.ventas||0)/maxVen)*100), 1);
-          var roas = c.gasto > 0 ? fmt(c.ventas/c.gasto,2)+'x' : '—';
-          return '<div class="hbar-row">' +
-            '<div class="hbar-label" title="'+nombre+'">'+nombre+'</div>' +
-            '<div style="flex:1;display:flex;flex-direction:column;gap:3px;">' +
-              '<div style="display:flex;align-items:center;gap:6px;">' +
-                '<div style="flex:1;height:10px;background:var(--surface2);border-radius:2px;overflow:hidden;">' +
-                  '<div style="width:'+invPct+'%;height:100%;background:#1A56DB;border-radius:2px;"></div>' +
-                '</div>' +
-                '<span style="width:68px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;">'+fmtEur(c.gasto||0)+'</span>' +
-              '</div>' +
-              '<div style="display:flex;align-items:center;gap:6px;">' +
-                '<div style="flex:1;height:10px;background:var(--surface2);border-radius:2px;overflow:hidden;">' +
-                  '<div style="width:'+venPct+'%;height:100%;background:#16A34A;border-radius:2px;"></div>' +
-                '</div>' +
-                '<span style="width:68px;font-size:11px;color:var(--ink-light);text-align:right;white-space:nowrap;">'+roas+'</span>' +
-              '</div>' +
-            '</div>' +
-          '</div>';
-        }).join('') +
-        '</div>';
+      renderTablaCampanas(el, campanas, mes, !campanas.length);
     }
 
 
