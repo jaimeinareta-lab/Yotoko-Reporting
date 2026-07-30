@@ -276,6 +276,11 @@
           <div class="kpi-value" id="kpiTacos">—</div>
           <div class="kpi-sub">gasto ads / ventas totales</div>
         </div>
+        <div class="kpi-card" id="kpiRoasCard">
+          <div class="kpi-label">ROAS</div>
+          <div class="kpi-value" id="kpiRoas">—</div>
+          <div class="kpi-sub">ventas ads / gasto ads</div>
+        </div>
       </div>
     </div>
 
@@ -546,9 +551,13 @@
       const prodParams = {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, order:'ventas_totales.desc'};
       if (currentMarketplace) prodParams.marketplace = `eq.${currentMarketplace}`;
 
+      const campParams = {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, order:'gasto.desc'};
+      const paisFiltro = mktToPais(currentMarketplace);
+      if (paisFiltro) campParams.pais = `eq.${paisFiltro}`;
+
       const [productos, campanas, mktRows] = await Promise.all([
         sbFetch('productos', prodParams),
-        sbFetch('campanas',  {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, order:'gasto.desc'}),
+        sbFetch('campanas',  campParams),
         sbFetch('productos', {select:'marketplace', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`}),
       ]);
 
@@ -619,6 +628,11 @@
     document.getElementById('kpiTacos').textContent=`${fmt(tacos,1)}%`;
     document.getElementById('kpiTacos').className='kpi-value '+(tacos<=15?'positive':tacos<=25?'':'negative');
     document.getElementById('kpiTacosCard').className='kpi-card '+(tacos<=15?'positive':tacos<=25?'':'negative');
+
+    const roasGlobal=adsSpend>0?(ventasPPCcamp/adsSpend):0;
+    document.getElementById('kpiRoas').textContent=adsSpend>0?`${fmt(roasGlobal,2)}x`:'—';
+    document.getElementById('kpiRoas').className='kpi-value '+(roasGlobal>=3?'positive':roasGlobal>=2?'':'negative');
+    document.getElementById('kpiRoasCard').className='kpi-card '+(roasGlobal>=3?'positive':roasGlobal>=2?'':'negative');
 
     document.getElementById('donutOrg').textContent=`${fmt(pctOrg,1)}%`;
     document.getElementById('donutOrgEur').textContent=fmtEur(ventasOrg);
