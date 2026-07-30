@@ -542,6 +542,14 @@
     });
   }
 
+  function mktToPais(mkt) {
+    if (!mkt) return null;
+    const partes = mkt.toUpperCase().split(/[^A-Z]+/).filter(function(p) { return p && p !== 'AMAZON' && p !== 'CO'; });
+    if (!partes.length) return null;
+    const ultima = partes[partes.length - 1];
+    return ultima === 'COM' ? 'US' : ultima;
+  }
+
   async function loadMes(mes, marketplace) {
     currentMes = mes;
     currentMarketplace = marketplace || null;
