@@ -766,6 +766,13 @@
     const totalVentas=prodAgg.reduce((s,p)=>s+(p.ventas_totales||0),0);
     const ventasOrg=Math.max(0,totalVentas-ventasPPC);
     const totalUni=prodAgg.reduce((s,p)=>s+(p.unidades_vendidas||0),0);
+    // La tabla productos no guarda el desglose real de unidades org/PPC por pedido,
+    // así que se estima proporcionalmente al peso de ventas PPC de cada producto.
+    const uniPPC=Math.round(prodAgg.reduce((s,p)=>{
+      const share=(p.ventas_totales||0)>0?Math.min(1,Math.max(0,(p.ppc_ventas||0)/(p.ventas_totales||0))):0;
+      return s+(p.unidades_vendidas||0)*share;
+    },0));
+    const uniOrg=Math.max(0,totalUni-uniPPC);
     const adsSpend=campanas.reduce((s,c)=>s+(c.gasto||0),0);
     const ventasPPCcamp=campanas.reduce((s,c)=>s+(c.ventas||0),0);
     const tacos=totalVentas>0?(adsSpend/totalVentas)*100:0;
@@ -774,7 +781,7 @@
 
     document.getElementById('kpiVentas').textContent=fmtEur(totalVentas);
     document.getElementById('kpiUnidades').textContent=fmt(totalUni);
-    document.getElementById('kpiUniSub').textContent=`ventas PPC: ${fmtEur(ventasPPC)}`;
+    document.getElementById('kpiUniSub').textContent=`${fmt(uniOrg)} orgánicas · ${fmt(uniPPC)} PPC`;
     document.getElementById('kpiNetProfit').textContent=fmtEur(adsSpend);
     document.getElementById('kpiNetProfit').className='kpi-value';
     document.getElementById('kpiNetCard').className='kpi-card blue';
