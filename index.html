@@ -371,15 +371,15 @@
   <div id="tabTareas" style="display:none;">
     <div class="section">
       <div class="section-header"><div class="section-title">Tareas realizadas</div><div class="section-line"></div></div>
-      <div class="chart-card tareas-editable" id="tareasContent" style="white-space:pre-wrap;line-height:1.7;font-size:14px;cursor:text;" title="Doble clic para editar">Cargando...</div>
+      <div class="chart-card informe-editable" id="tareasContent" data-field="tareas" style="white-space:pre-wrap;line-height:1.7;font-size:14px;cursor:text;" title="Doble clic para editar">Cargando...</div>
     </div>
     <div class="section">
       <div class="section-header"><div class="section-title">Alertas</div><div class="section-line"></div></div>
-      <div class="chart-card" id="alertasContent" style="white-space:pre-wrap;line-height:1.7;font-size:14px;">Cargando...</div>
+      <div class="chart-card informe-editable" id="alertasContent" data-field="alertas" style="white-space:pre-wrap;line-height:1.7;font-size:14px;cursor:text;" title="Doble clic para editar">Cargando...</div>
     </div>
     <div class="section">
       <div class="section-header"><div class="section-title">Próximos pasos / Propuestas / Mejoras</div><div class="section-line"></div></div>
-      <div class="chart-card" id="proximosPasosContent" style="white-space:pre-wrap;line-height:1.7;font-size:14px;">Cargando...</div>
+      <div class="chart-card informe-editable" id="proximosPasosContent" data-field="proximos_pasos" style="white-space:pre-wrap;line-height:1.7;font-size:14px;cursor:text;" title="Doble clic para editar">Cargando...</div>
     </div>
     <footer class="footer">
       <div class="footer-logo">GROW<span>STUDIO</span>®</div>
@@ -643,7 +643,11 @@
       elTareas.dataset.raw = row.tareas || '';
       elTareas.dataset.mes = mes;
       elAlertas.textContent = row.alertas || 'Sin alertas para este mes.';
+      elAlertas.dataset.raw = row.alertas || '';
+      elAlertas.dataset.mes = mes;
       elProximos.textContent = row.proximos_pasos || 'Sin próximos pasos registrados para este mes.';
+      elProximos.dataset.raw = row.proximos_pasos || '';
+      elProximos.dataset.mes = mes;
     } catch(e) {
       const msg = 'No se pudo cargar el informe: ' + e.message;
       elTareas.textContent = msg;
@@ -652,9 +656,16 @@
     }
   }
 
-  // ── Edición de "Tareas realizadas" — persiste en Supabase (informes.tareas) ──
-  function makeTareasEditable(el) {
+  // ── Edición de tareas/alertas/próximos pasos — persiste en Supabase (informes.<campo>) ──
+  const INFORME_PLACEHOLDER = {
+    tareas: 'Sin tareas registradas para este mes.',
+    alertas: 'Sin alertas para este mes.',
+    proximos_pasos: 'Sin próximos pasos registrados para este mes.'
+  };
+  function makeInformeEditable(el) {
     if (el.querySelector('textarea')) return;
+    const field = el.dataset.field;
+    const placeholder = INFORME_PLACEHOLDER[field] || 'Sin datos para este mes.';
     const current = el.dataset.raw || '';
     const mes = el.dataset.mes || currentMes;
     const ta = document.createElement('textarea');
@@ -669,27 +680,29 @@
       saved = true;
       const val = ta.value.trim();
       if (val === current.trim()) {
-        el.textContent = current || 'Sin tareas registradas para este mes.';
+        el.textContent = current || placeholder;
         return;
       }
       el.textContent = 'Guardando...';
       try {
-        const updated = await sbPatch('informes', {cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`}, {tareas: val});
+        const body = {}; body[field] = val;
+        const updated = await sbPatch('informes', {cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`}, body);
         if (!updated.length) {
-          await sbInsert('informes', {cliente_id: CONFIG.clienteId, mes, tareas: val});
+          const insertBody = {cliente_id: CONFIG.clienteId, mes, contenido: val}; insertBody[field] = val;
+          await sbInsert('informes', insertBody);
         }
-        el.textContent = val || 'Sin tareas registradas para este mes.';
+        el.textContent = val || placeholder;
         el.dataset.raw = val;
       } catch(e) {
         el.textContent = 'Error al guardar: ' + e.message;
-        setTimeout(function() { el.textContent = current || 'Sin tareas registradas para este mes.'; }, 3000);
+        setTimeout(function() { el.textContent = current || placeholder; }, 3000);
       }
     }
     ta.addEventListener('blur', save);
     ta.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
         saved = true;
-        el.textContent = current || 'Sin tareas registradas para este mes.';
+        el.textContent = current || placeholder;
       }
     });
   }
@@ -1208,8 +1221,8 @@
   document.addEventListener('dblclick', function(e) {
     var num = e.target.closest('[data-gs-num]');
     if (num) { e.preventDefault(); e.stopPropagation(); gsNumEdit(num); return; }
-    var tareasEl = e.target.closest('#tareasContent');
-    if (tareasEl) { e.preventDefault(); makeTareasEditable(tareasEl); return; }
+    var informeEl = e.target.closest('.informe-editable');
+    if (informeEl) { e.preventDefault(); makeInformeEditable(informeEl); return; }
     var cell = e.target.closest('.titulo-cell');
     if (!cell) return;
     e.preventDefault();
