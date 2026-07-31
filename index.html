@@ -290,6 +290,22 @@
     </div>
 
     <div class="section">
+      <div class="section-header"><div class="section-title">Evolución mensual</div><div class="section-line"></div></div>
+      <div class="chart-grid-2">
+        <div class="chart-card">
+          <div class="chart-title">Ventas totales</div>
+          <div class="chart-sub">Histórico por mes</div>
+          <div class="chart-wrap" style="height:220px;"><canvas id="chartEvolVentas"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">ACoS</div>
+          <div class="chart-sub">Histórico por mes</div>
+          <div class="chart-wrap" style="height:220px;"><canvas id="chartEvolAcos"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-header"><div class="section-title">Distribución de ventas</div><div class="section-line"></div></div>
       <div class="chart-grid-3">
         <div class="chart-card">
@@ -402,7 +418,9 @@
 
   const fmt = (n,d=0) => new Intl.NumberFormat('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n||0);
   const fmtEur = n => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
+  const fmtEurDec = n => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
   const fmtMes = k => { const [y,m]=k.split('-'); const s=new Date(y,m-1).toLocaleString('es-ES',{month:'long',year:'numeric'}); return s.charAt(0).toUpperCase()+s.slice(1); };
+  const fmtMesCorto = k => { const [y,m]=k.split('-'); const s=new Date(y,m-1).toLocaleString('es-ES',{month:'short',year:'2-digit'}); return (s.charAt(0).toUpperCase()+s.slice(1)).replace('.',''); };
 
   function extractTipo(nombre) {
     if (!nombre) return '—';
@@ -557,9 +575,52 @@
         tabsEl.appendChild(btn);
       });
 
+      loadEvolucion(allMeses);
       await loadMes(allMeses[0], null);
     } catch(e) {
       document.getElementById('loadingState').innerHTML = `<p style="color:var(--negative);">${e.message}</p>`;
+    }
+  }
+
+  // ── Evolución mensual — histórico completo del cliente, independiente del mes seleccionado ──
+  async function loadEvolucion(meses) {
+    try {
+      const [productos, campanas] = await Promise.all([
+        sbFetch('productos', {select:'mes,ventas_totales', cliente_id:`eq.${CONFIG.clienteId}`, limit:'5000'}),
+        sbFetch('campanas',  {select:'mes,gasto', cliente_id:`eq.${CONFIG.clienteId}`, limit:'5000'}),
+      ]);
+      const ventasPorMes = {};
+      productos.forEach(function(p) { ventasPorMes[p.mes] = (ventasPorMes[p.mes]||0) + (p.ventas_totales||0); });
+      const gastoPorMes = {};
+      campanas.forEach(function(c) { gastoPorMes[c.mes] = (gastoPorMes[c.mes]||0) + (c.gasto||0); });
+
+      const mesesAsc = [...meses].sort();
+      const labels = mesesAsc.map(fmtMesCorto);
+      const ventasData = mesesAsc.map(function(m) { return ventasPorMes[m] || 0; });
+      const acosData = mesesAsc.map(function(m) {
+        const v = ventasPorMes[m] || 0, g = gastoPorMes[m] || 0;
+        return v > 0 ? (g / v) * 100 : 0;
+      });
+
+      makeChart('chartEvolVentas', 'line', labels, [{
+        label: 'Ventas totales', data: ventasData,
+        borderColor: '#1A56DB', backgroundColor: 'rgba(26,86,219,0.12)',
+        fill: true, tension: 0.3, pointRadius: 3
+      }], {
+        yFmt: function(v) { return fmtEur(v); },
+        tooltipCallbacks: { label: function(ctx) { return ' ' + fmtEur(ctx.parsed.y); } }
+      });
+
+      makeChart('chartEvolAcos', 'line', labels, [{
+        label: 'ACoS', data: acosData,
+        borderColor: '#DC2626', backgroundColor: 'rgba(220,38,38,0.12)',
+        fill: true, tension: 0.3, pointRadius: 3
+      }], {
+        yFmt: function(v) { return fmt(v, 1) + '%'; },
+        tooltipCallbacks: { label: function(ctx) { return ' ' + fmt(ctx.parsed.y, 1) + '%'; } }
+      });
+    } catch(e) {
+      // Sección decorativa: si falla, no bloquea el resto del panel.
     }
   }
 
@@ -950,6 +1011,10 @@
         var c = calcRoasAcos(inv, ven);
         tr.querySelector('.td-roas').textContent = c.roas;
         tr.querySelector('.td-acos').textContent = c.acos;
+        // Recalcular CPC si cambió la inversión (el CTR no depende de gasto/ventas)
+        var clicsRow = parseFloat(tr.dataset.clics) || 0;
+        var cpcEl = tr.querySelector('.td-cpc');
+        if (cpcEl) cpcEl.textContent = clicsRow > 0 ? fmtEurDec(inv / clicsRow) : '—';
         // Auto-guardar fila completa (para clientes sin datos en Supabase)
         persistirCampanas(tr.closest('table'));
       }
@@ -985,16 +1050,23 @@
       var inv = parseFloat(r.gasto) || 0;
       var ven = parseFloat(r.ventas) || 0;
       var c = calcRoasAcos(inv, ven);
+      var imp = parseFloat(r.impresiones) || 0;
+      var clics = parseFloat(r.clics) || 0;
+      var ctr = imp > 0 ? fmt((clics / imp) * 100, 2) + '%' : '—';
+      var cpc = clics > 0 ? fmtEurDec(inv / clics) : '—';
       var originalNombre = r.campana_nombre || '';
       // El nombre mostrado respeta el override del usuario; los números siempre vienen del origen (Supabase o manual)
       var nombre = getCampNombreOv(mes, originalNombre) || originalNombre;
       var tr = document.createElement('tr');
+      tr.dataset.clics = clics;
       tr.innerHTML =
         '<td data-tipo="nombre" data-original-nombre="' + originalNombre.replace(/"/g,'&quot;') + '"><div class="camp-td-inner editable" data-val="' + nombre.replace(/"/g,'&quot;') + '">' + (nombre || '') + '</div></td>' +
         '<td data-tipo="gasto"><div class="camp-td-inner editable num" data-val="' + inv + '">' + fmtEur(inv) + '</div></td>' +
         '<td data-tipo="ventas"><div class="camp-td-inner editable num" data-val="' + ven + '">' + fmtEur(ven) + '</div></td>' +
         '<td><div class="camp-td-inner calc td-roas">' + c.roas + '</div></td>' +
         '<td><div class="camp-td-inner calc td-acos">' + c.acos + '</div></td>' +
+        '<td><div class="camp-td-inner calc td-ctr" title="Clics / impresiones">' + ctr + '</div></td>' +
+        '<td><div class="camp-td-inner calc td-cpc" title="Inversión / clics">' + cpc + '</div></td>' +
         '<td class="camp-td-del"><button class="btn-del-row" title="Eliminar">&#10005;</button></td>';
 
       tr.querySelectorAll('[data-tipo]').forEach(function(td) {
@@ -1021,6 +1093,8 @@
           '<th class="th-num">Ventas PPC</th>' +
           '<th class="th-num">ROAS</th>' +
           '<th class="th-num">ACoS</th>' +
+          '<th class="th-num">CTR</th>' +
+          '<th class="th-num">CPC</th>' +
           '<th></th>' +
         '</tr></thead>' +
         '<tbody></tbody>';
