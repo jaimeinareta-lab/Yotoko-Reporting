@@ -244,6 +244,15 @@
 
 <div id="monthTabs" class="month-tabs" style="display:none;"></div>
 <div id="marketplaceTabs" class="marketplace-tabs" style="display:none;"></div>
+<div id="rangoControls" style="display:none;align-items:center;gap:10px;margin:0 40px 16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-width:1200px;margin-left:auto;margin-right:auto;flex-wrap:wrap;">
+  <span style="font-size:11px;color:var(--ink-light);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Rango de fechas</span>
+  <input type="date" id="rangoDesde" style="font-family:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);">
+  <span style="color:var(--ink-light);">→</span>
+  <input type="date" id="rangoHasta" style="font-family:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);">
+  <button id="btnAplicarRango" style="font-family:inherit;font-size:12px;font-weight:600;padding:6px 14px;border:none;border-radius:6px;background:var(--accent2);color:#fff;cursor:pointer;">Aplicar</button>
+  <button id="btnResetRango" style="font-family:inherit;font-size:12px;font-weight:600;padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;">Ver mes completo</button>
+  <span id="rangoAviso" style="font-size:11px;color:var(--ink-light);"></span>
+</div>
 
 <div id="viewTabs" class="marketplace-tabs" style="display:flex;">
   <button class="marketplace-tab active" id="viewTabResumen">📊 Resumen</button>
@@ -301,6 +310,21 @@
           <div class="chart-title">ACoS</div>
           <div class="chart-sub">Histórico por mes</div>
           <div class="chart-wrap" style="height:220px;"><canvas id="chartEvolAcos"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-title">Evolución diaria</div><div class="section-line"></div></div>
+      <div class="chart-sub" style="margin:-8px 0 12px;">Del rango de fechas seleccionado arriba, dentro del mes activo</div>
+      <div class="chart-grid-2">
+        <div class="chart-card">
+          <div class="chart-title">Ventas por día</div>
+          <div id="chartDiarioVentasWrap" class="chart-wrap" style="height:220px;"><canvas id="chartDiarioVentas"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">ACoS por día</div>
+          <div id="chartDiarioAcosWrap" class="chart-wrap" style="height:220px;"><canvas id="chartDiarioAcos"></canvas></div>
         </div>
       </div>
     </div>
@@ -415,6 +439,15 @@
   let currentMes = null;
   let currentMarketplace = null;
   let currentView = 'resumen';
+  let currentRango = null;
+
+  function limitesMes(mes) {
+    const [y, m] = mes.split('-').map(Number);
+    const desde = mes + '-01';
+    const ultimoDia = new Date(y, m, 0).getDate();
+    const hasta = mes + '-' + String(ultimoDia).padStart(2, '0');
+    return { desde, hasta };
+  }
 
   const fmt = (n,d=0) => new Intl.NumberFormat('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n||0);
   const fmtEur = n => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
@@ -640,7 +673,7 @@
     allBtn.addEventListener('click', async function() {
       tabsEl.querySelectorAll('.marketplace-tab').forEach(function(b) { b.classList.remove('active'); });
       this.classList.add('active');
-      await loadMes(currentMes, null);
+      await loadMes(currentMes, null, currentRango);
     });
     tabsEl.appendChild(allBtn);
 
@@ -651,7 +684,7 @@
       btn.addEventListener('click', async function() {
         tabsEl.querySelectorAll('.marketplace-tab').forEach(function(b) { b.classList.remove('active'); });
         this.classList.add('active');
-        await loadMes(currentMes, mkt);
+        await loadMes(currentMes, mkt, currentRango);
       });
       tabsEl.appendChild(btn);
     });
@@ -665,16 +698,23 @@
     return ultima === 'COM' ? 'US' : ultima;
   }
 
-  async function loadMes(mes, marketplace) {
+  async function loadMes(mes, marketplace, rango) {
     currentMes = mes;
     currentMarketplace = marketplace || null;
+    currentRango = rango || limitesMes(mes);
+    document.getElementById('rangoDesde').value = currentRango.desde;
+    document.getElementById('rangoHasta').value = currentRango.hasta;
+    document.getElementById('rangoControls').style.display = 'flex';
+    document.getElementById('rangoAviso').textContent = '';
     document.getElementById('loadingState').style.display = 'flex';
     document.getElementById('content').style.display = 'none';
     try {
-      const prodParams = {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, order:'ventas_totales.desc'};
+      const rangoFiltro = `(fecha.gte.${currentRango.desde},fecha.lte.${currentRango.hasta})`;
+
+      const prodParams = {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, and:rangoFiltro, order:'ventas_totales.desc'};
       if (currentMarketplace) prodParams.marketplace = `eq.${currentMarketplace}`;
 
-      const campParams = {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, order:'gasto.desc'};
+      const campParams = {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, and:rangoFiltro, order:'gasto.desc'};
       const paisFiltro = mktToPais(currentMarketplace);
       if (paisFiltro) campParams.pais = `eq.${paisFiltro}`;
 
@@ -691,11 +731,71 @@
       var campañasFinales = campanas.length ? campanas : loadManualCampanas(mes);
 
       render(productos, campañasFinales, mes, true);
+      renderEvolucionDiaria(productos, campanas);
       loadTareas(mes);
     } catch(e) {
       document.getElementById('loadingState').innerHTML = `<p style="color:var(--negative);">${e.message}</p>`;
     }
   }
+
+  // ── Evolución diaria — dentro del mes/rango seleccionado, usando la fecha real por fila ──
+  function renderEvolucionDiaria(productos, campanas) {
+    const ventasPorDia = {};
+    productos.forEach(function(p) { if (p.fecha) ventasPorDia[p.fecha] = (ventasPorDia[p.fecha]||0) + (p.ventas_totales||0); });
+    const gastoPorDia = {};
+    campanas.forEach(function(c) { if (c.fecha) gastoPorDia[c.fecha] = (gastoPorDia[c.fecha]||0) + (c.gasto||0); });
+
+    const dias = [...new Set([...Object.keys(ventasPorDia), ...Object.keys(gastoPorDia)])].sort();
+    const wrapV = document.getElementById('chartDiarioVentasWrap');
+    const wrapA = document.getElementById('chartDiarioAcosWrap');
+
+    if (!dias.length) {
+      const cv = Chart.getChart('chartDiarioVentas'); if (cv) cv.destroy();
+      const ca = Chart.getChart('chartDiarioAcos'); if (ca) ca.destroy();
+      wrapV.innerHTML = '<canvas id="chartDiarioVentas"></canvas><p class="no-data" style="position:relative;top:-140px;">Sin datos diarios en este rango.</p>';
+      wrapA.innerHTML = '<canvas id="chartDiarioAcos"></canvas><p class="no-data" style="position:relative;top:-140px;">Sin datos diarios en este rango.</p>';
+      return;
+    }
+    if (!document.getElementById('chartDiarioVentas')) wrapV.innerHTML = '<canvas id="chartDiarioVentas"></canvas>';
+    if (!document.getElementById('chartDiarioAcos')) wrapA.innerHTML = '<canvas id="chartDiarioAcos"></canvas>';
+
+    const labels = dias.map(function(d) { return d.substring(8,10) + '/' + d.substring(5,7); });
+    const ventasData = dias.map(function(d) { return ventasPorDia[d] || 0; });
+    const acosData = dias.map(function(d) {
+      const v = ventasPorDia[d] || 0, g = gastoPorDia[d] || 0;
+      return v > 0 ? (g / v) * 100 : 0;
+    });
+
+    makeChart('chartDiarioVentas', 'line', labels, [{
+      label: 'Ventas', data: ventasData,
+      borderColor: '#16A34A', backgroundColor: 'rgba(22,163,74,0.12)',
+      fill: true, tension: 0.3, pointRadius: dias.length > 20 ? 0 : 3
+    }], {
+      yFmt: function(v) { return fmtEur(v); },
+      tooltipCallbacks: { label: function(ctx) { return ' ' + fmtEur(ctx.parsed.y); } }
+    });
+
+    makeChart('chartDiarioAcos', 'line', labels, [{
+      label: 'ACoS', data: acosData,
+      borderColor: '#DC2626', backgroundColor: 'rgba(220,38,38,0.12)',
+      fill: true, tension: 0.3, pointRadius: dias.length > 20 ? 0 : 3
+    }], {
+      yFmt: function(v) { return fmt(v, 1) + '%'; },
+      tooltipCallbacks: { label: function(ctx) { return ' ' + fmt(ctx.parsed.y, 1) + '%'; } }
+    });
+  }
+
+  document.getElementById('btnAplicarRango').addEventListener('click', async function() {
+    const desde = document.getElementById('rangoDesde').value;
+    const hasta = document.getElementById('rangoHasta').value;
+    const aviso = document.getElementById('rangoAviso');
+    if (!desde || !hasta) { aviso.textContent = 'Selecciona ambas fechas.'; return; }
+    if (desde > hasta) { aviso.textContent = 'La fecha "desde" no puede ser posterior a "hasta".'; return; }
+    await loadMes(currentMes, currentMarketplace, { desde, hasta });
+  });
+  document.getElementById('btnResetRango').addEventListener('click', async function() {
+    await loadMes(currentMes, currentMarketplace, limitesMes(currentMes));
+  });
 
   async function loadTareas(mes) {
     const elTareas = document.getElementById('tareasContent');
