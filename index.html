@@ -449,6 +449,27 @@
     return { desde, hasta };
   }
 
+  // Ahora que 'campanas' puede traer una fila por día, hay que sumarlas por
+  // campaña para mostrar (y calcular KPIs sobre) los totales del rango, no
+  // filas sueltas repetidas por cada día.
+  function agregarCampanasPorId(rows) {
+    const grouped = {};
+    rows.forEach(function(c) {
+      const key = c.campana_id || c.campana_nombre;
+      if (!grouped[key]) {
+        grouped[key] = { campana_id: c.campana_id, campana_nombre: c.campana_nombre, tipo: c.tipo, pais: c.pais, impresiones: 0, clics: 0, gasto: 0, ventas: 0 };
+      }
+      grouped[key].impresiones += c.impresiones || 0;
+      grouped[key].clics += c.clics || 0;
+      grouped[key].gasto += c.gasto || 0;
+      grouped[key].ventas += c.ventas || 0;
+    });
+    return Object.values(grouped).map(function(c) {
+      c.acos = c.ventas > 0 ? (c.gasto / c.ventas) * 100 : 0;
+      return c;
+    });
+  }
+
   const fmt = (n,d=0) => new Intl.NumberFormat('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n||0);
   const fmtEur = n => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
   const fmtEurDec = n => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
@@ -727,8 +748,12 @@
       const marketplaces = [...new Set(mktRows.map(function(r) { return r.marketplace; }).filter(function(m) { return m && m !== ''; }))].sort();
       renderMarketplaceTabs(marketplaces, currentMarketplace);
 
+      // Ahora que hay filas diarias, hay que sumarlas por campaña antes de mostrarlas
+      // (si no, un rango de varios días muestra la misma campaña repetida una vez por día)
+      var campanasAgregadas = agregarCampanasPorId(campanas);
+
       // Supabase tiene prioridad; localStorage es fallback cuando no hay datos en API
-      var campañasFinales = campanas.length ? campanas : loadManualCampanas(mes);
+      var campañasFinales = campanasAgregadas.length ? campanasAgregadas : loadManualCampanas(mes);
 
       render(productos, campañasFinales, mes, true);
       renderEvolucionDiaria(productos, campanas);
