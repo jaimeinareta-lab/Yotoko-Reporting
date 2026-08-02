@@ -177,6 +177,45 @@
       font-weight: 600;
     }
 
+    .filter-bar {
+      display: none;
+      align-items: center;
+      gap: 20px;
+      margin: 0 auto 20px;
+      padding: 14px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      max-width: 1200px;
+      flex-wrap: wrap;
+    }
+    .filter-group { display: flex; align-items: center; gap: 8px; }
+    .filter-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--ink-light); white-space: nowrap;
+    }
+    .filter-divider { width: 1px; align-self: stretch; background: var(--border); }
+    .filter-input {
+      font-family: var(--font); font-size: 13px; padding: 6px 10px;
+      border: 1px solid var(--border); border-radius: 6px;
+      background: var(--bg); color: var(--ink);
+    }
+    .filter-input:focus { outline: none; border-color: var(--accent2); }
+    .filter-btn {
+      font-family: var(--font); font-size: 12px; font-weight: 600;
+      padding: 7px 14px; border: 1px solid var(--border); border-radius: 6px;
+      background: transparent; color: var(--ink); cursor: pointer;
+      transition: background 0.12s;
+    }
+    .filter-btn:hover { background: var(--surface2); }
+    .filter-btn-primary { border: none; background: var(--accent2); color: #fff; }
+    .filter-btn-primary:hover { background: var(--accent2); opacity: 0.88; }
+    .filter-aviso { font-size: 11px; color: var(--negative); }
+    .filter-nota {
+      display: none; font-size: 11px; color: var(--ink-light);
+      font-style: italic; margin: -12px auto 16px; max-width: 1200px;
+    }
+
     /* TABLA DE CAMPAÑAS EDITABLE */
     .camp-table { width: 100%; border-collapse: collapse; }
     .camp-table th { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-light); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -244,15 +283,25 @@
 
 <div id="monthTabs" class="month-tabs" style="display:none;"></div>
 <div id="marketplaceTabs" class="marketplace-tabs" style="display:none;"></div>
-<div id="rangoControls" style="display:none;align-items:center;gap:10px;margin:0 40px 16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-width:1200px;margin-left:auto;margin-right:auto;flex-wrap:wrap;">
-  <span style="font-size:11px;color:var(--ink-light);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Rango de fechas</span>
-  <input type="date" id="rangoDesde" style="font-family:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);">
-  <span style="color:var(--ink-light);">→</span>
-  <input type="date" id="rangoHasta" style="font-family:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--ink);">
-  <button id="btnAplicarRango" style="font-family:inherit;font-size:12px;font-weight:600;padding:6px 14px;border:none;border-radius:6px;background:var(--accent2);color:#fff;cursor:pointer;">Aplicar</button>
-  <button id="btnResetRango" style="font-family:inherit;font-size:12px;font-weight:600;padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;">Ver mes completo</button>
-  <span id="rangoAviso" style="font-size:11px;color:var(--ink-light);"></span>
+<div id="rangoControls" class="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">Rango de fechas</span>
+    <input type="date" id="rangoDesde" class="filter-input">
+    <span style="color:var(--ink-light);font-size:12px;">→</span>
+    <input type="date" id="rangoHasta" class="filter-input">
+    <button id="btnAplicarRango" class="filter-btn filter-btn-primary">Aplicar</button>
+    <button id="btnResetRango" class="filter-btn">Mes completo</button>
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-group">
+    <span class="filter-label">Producto</span>
+    <select id="filtroProducto" class="filter-input" style="min-width:240px;">
+      <option value="">Todos los productos</option>
+    </select>
+  </div>
+  <span id="rangoAviso" class="filter-aviso"></span>
 </div>
+<div id="productoAviso" class="filter-nota">Nota: el gasto/ACoS de campañas se muestra a nivel de cuenta completa — Amazon Ads no desglosa el gasto por producto en estos datos.</div>
 
 <div id="viewTabs" class="marketplace-tabs" style="display:flex;">
   <button class="marketplace-tab active" id="viewTabResumen">📊 Resumen</button>
@@ -440,6 +489,7 @@
   let currentMarketplace = null;
   let currentView = 'resumen';
   let currentRango = null;
+  let currentProducto = null;
 
   function limitesMes(mes) {
     const [y, m] = mes.split('-').map(Number);
@@ -630,9 +680,35 @@
       });
 
       loadEvolucion(allMeses);
+      loadFiltroProductos();
       await loadMes(allMeses[0], null);
     } catch(e) {
       document.getElementById('loadingState').innerHTML = `<p style="color:var(--negative);">${e.message}</p>`;
+    }
+  }
+
+  // ── Filtro por producto — lista de productos históricos del cliente ──
+  async function loadFiltroProductos() {
+    try {
+      const rows = await sbFetch('productos', {select:'asin,titulo', cliente_id:`eq.${CONFIG.clienteId}`, limit:'5000'});
+      const porAsin = new Map();
+      rows.forEach(function(r) {
+        if (r.asin && !porAsin.has(r.asin)) porAsin.set(r.asin, r.titulo || r.asin);
+      });
+      const opciones = [...porAsin.entries()].sort(function(a,b) { return a[1].localeCompare(b[1]); });
+      const sel = document.getElementById('filtroProducto');
+      opciones.forEach(function([asin, titulo]) {
+        const opt = document.createElement('option');
+        opt.value = asin;
+        opt.textContent = truncWords(titulo, 6);
+        opt.title = titulo;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', async function() {
+        await loadMes(currentMes, currentMarketplace, currentRango, this.value || null);
+      });
+    } catch(e) {
+      // Sección decorativa: si falla, el filtro simplemente no se rellena.
     }
   }
 
@@ -694,7 +770,7 @@
     allBtn.addEventListener('click', async function() {
       tabsEl.querySelectorAll('.marketplace-tab').forEach(function(b) { b.classList.remove('active'); });
       this.classList.add('active');
-      await loadMes(currentMes, null, currentRango);
+      await loadMes(currentMes, null, currentRango, currentProducto);
     });
     tabsEl.appendChild(allBtn);
 
@@ -705,7 +781,7 @@
       btn.addEventListener('click', async function() {
         tabsEl.querySelectorAll('.marketplace-tab').forEach(function(b) { b.classList.remove('active'); });
         this.classList.add('active');
-        await loadMes(currentMes, mkt, currentRango);
+        await loadMes(currentMes, mkt, currentRango, currentProducto);
       });
       tabsEl.appendChild(btn);
     });
@@ -719,14 +795,17 @@
     return ultima === 'COM' ? 'US' : ultima;
   }
 
-  async function loadMes(mes, marketplace, rango) {
+  async function loadMes(mes, marketplace, rango, producto) {
     currentMes = mes;
     currentMarketplace = marketplace || null;
     currentRango = rango || limitesMes(mes);
+    currentProducto = producto || null;
     document.getElementById('rangoDesde').value = currentRango.desde;
     document.getElementById('rangoHasta').value = currentRango.hasta;
+    document.getElementById('filtroProducto').value = currentProducto || '';
     document.getElementById('rangoControls').style.display = 'flex';
     document.getElementById('rangoAviso').textContent = '';
+    document.getElementById('productoAviso').style.display = currentProducto ? 'block' : 'none';
     document.getElementById('loadingState').style.display = 'flex';
     document.getElementById('content').style.display = 'none';
     try {
@@ -734,6 +813,7 @@
 
       const prodParams = {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, and:rangoFiltro, order:'ventas_totales.desc'};
       if (currentMarketplace) prodParams.marketplace = `eq.${currentMarketplace}`;
+      if (currentProducto) prodParams.asin = `eq.${currentProducto}`;
 
       const campParams = {select:'*', cliente_id:`eq.${CONFIG.clienteId}`, mes:`eq.${mes}`, and:rangoFiltro, order:'gasto.desc'};
       const paisFiltro = mktToPais(currentMarketplace);
@@ -816,10 +896,10 @@
     const aviso = document.getElementById('rangoAviso');
     if (!desde || !hasta) { aviso.textContent = 'Selecciona ambas fechas.'; return; }
     if (desde > hasta) { aviso.textContent = 'La fecha "desde" no puede ser posterior a "hasta".'; return; }
-    await loadMes(currentMes, currentMarketplace, { desde, hasta });
+    await loadMes(currentMes, currentMarketplace, { desde, hasta }, currentProducto);
   });
   document.getElementById('btnResetRango').addEventListener('click', async function() {
-    await loadMes(currentMes, currentMarketplace, limitesMes(currentMes));
+    await loadMes(currentMes, currentMarketplace, limitesMes(currentMes), currentProducto);
   });
 
   async function loadTareas(mes) {
